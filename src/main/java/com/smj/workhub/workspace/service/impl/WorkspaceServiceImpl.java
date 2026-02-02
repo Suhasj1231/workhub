@@ -1,5 +1,6 @@
 package com.smj.workhub.workspace.service.impl;
 
+import com.smj.workhub.common.exception.DuplicateResourceException;
 import com.smj.workhub.common.exception.ResourceNotFoundException;
 import com.smj.workhub.workspace.entity.Workspace;
 import com.smj.workhub.workspace.repository.WorkspaceRepository;
@@ -43,29 +44,43 @@ public class WorkspaceServiceImpl implements WorkspaceService {
                 );
     }
 
-
-
-
     @Override
     public List<Workspace> getAllWorkspaces() {
         return workspaceRepository.findAll();
     }
 
+
+
+
     @Override
-    public Workspace updateWorkspace(Long id, String name, String description) {
+    public Workspace updateWorkspace(
+            Long id,
+            String name,
+            String description
+    ) {
+        Workspace workspace = workspaceRepository.findById(id)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Workspace not found with id: " + id
+                        )
+                );
 
-        Workspace workspace = getWorkspaceById(id);
+        String normalizedName = name.trim();
 
-        if (!workspace.getName().equals(name)
-                && workspaceRepository.existsByName(name)) {
-            throw new IllegalArgumentException("Workspace with name already exists");
+        boolean nameExists = workspaceRepository.existsByName(normalizedName);
+
+        if (nameExists && !workspace.getName().equals(normalizedName)) {
+            throw new DuplicateResourceException(
+                    "Workspace with name '" + normalizedName + "' already exists"
+            );
         }
 
-        workspace.setName(name);
+        workspace.setName(normalizedName);
         workspace.setDescription(description);
 
         return workspaceRepository.save(workspace);
     }
+
 
     @Override
     public void deleteWorkspace(Long id) {

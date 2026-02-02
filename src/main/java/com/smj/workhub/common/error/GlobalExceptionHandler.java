@@ -1,5 +1,6 @@
 package com.smj.workhub.common.error;
 
+import com.smj.workhub.common.exception.DuplicateResourceException;
 import com.smj.workhub.common.exception.ResourceNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
@@ -46,6 +47,21 @@ public class GlobalExceptionHandler {
                 Instant.now()
         );
     }
+
+    @ExceptionHandler(DuplicateResourceException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ApiError handleDuplicateResource(
+            DuplicateResourceException ex,
+            HttpServletRequest request
+    ) {
+        return new ApiError(
+                HttpStatus.CONFLICT.value(),
+                ex.getMessage(),
+                request.getRequestURI(),
+                Instant.now()
+        );
+    }
+
 
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
