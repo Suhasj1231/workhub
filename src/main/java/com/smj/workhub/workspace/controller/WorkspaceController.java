@@ -1,16 +1,25 @@
 package com.smj.workhub.workspace.controller;
 
+import com.smj.workhub.common.error.ApiError;
 import com.smj.workhub.workspace.dto.CreateWorkspaceRequest;
 import com.smj.workhub.workspace.dto.UpdateWorkspaceRequest;
 import com.smj.workhub.workspace.dto.WorkspaceResponse;
 import com.smj.workhub.workspace.entity.Workspace;
 import com.smj.workhub.workspace.service.WorkspaceService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Tag(name = "Workspace", description = "Workspace management APIs")
 @RestController
 @RequestMapping("/api/workspaces")
 public class WorkspaceController {
@@ -22,6 +31,23 @@ public class WorkspaceController {
     }
 
     // -------- CREATE --------
+    @Operation(
+            summary = "Create a new workspace",
+            description = "Creates a workspace with a unique name"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Workspace created"),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid input",
+                    content = @Content(schema = @Schema(implementation = ApiError.class))
+            ),
+            @ApiResponse(
+                    responseCode = "409",
+                    description = "Workspace name already exists",
+                    content = @Content(schema = @Schema(implementation = ApiError.class))
+            )
+    })
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public WorkspaceResponse create(@Valid @RequestBody CreateWorkspaceRequest request) {
@@ -35,12 +61,44 @@ public class WorkspaceController {
     }
 
     // -------- GET BY ID --------
+    @Operation(
+            summary = "Get workspace by ID",
+            description = "Returns workspace details by ID"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Workspace found"),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Workspace not found",
+                    content = @Content(schema = @Schema(implementation = ApiError.class))
+            )
+    })
     @GetMapping("/{id}")
     public WorkspaceResponse getById(@PathVariable Long id) {
         return toResponse(workspaceService.getWorkspaceById(id));
     }
 
     // -------- GET ALL --------
+    @Operation(
+            summary = "Get all workspaces",
+            description = "Returns all workspaces (empty list if none exist)"
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "List of workspaces",
+                    content = @Content(
+                            array = @ArraySchema(
+                                    schema = @Schema(implementation = WorkspaceResponse.class)
+                            )
+                    ))
+            ,
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Workspace not found",
+                    content = @Content(schema = @Schema(implementation = ApiError.class))
+            )
+    })
     @GetMapping
     public List<WorkspaceResponse> getAll() {
         return workspaceService.getAllWorkspaces()
@@ -50,6 +108,19 @@ public class WorkspaceController {
     }
 
     // -------- UPDATE --------
+    @Operation(
+            summary = "Update workspace",
+            description = "Updates workspace name and description"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Workspace updated"),
+            @ApiResponse(responseCode = "400", description = "Invalid input",
+                    content = @Content(schema = @Schema(implementation = ApiError.class))),
+            @ApiResponse(responseCode = "404", description = "Workspace not found",
+                    content = @Content(schema = @Schema(implementation = ApiError.class))),
+            @ApiResponse(responseCode = "409", description = "Workspace name already exists",
+                    content = @Content(schema = @Schema(implementation = ApiError.class)))
+    })
     @PutMapping("/{id}")
     public WorkspaceResponse update(
             @PathVariable Long id,
@@ -64,6 +135,18 @@ public class WorkspaceController {
     }
 
     // -------- DELETE --------
+    @Operation(
+            summary = "Delete workspace",
+            description = "Deletes a workspace by ID"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Workspace deleted"),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Workspace not found",
+                    content = @Content(schema = @Schema(implementation = ApiError.class))
+            )
+    })
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long id) {
