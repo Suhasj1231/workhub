@@ -11,7 +11,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 @Service
-@Transactional
 public class WorkspaceServiceImpl implements WorkspaceService {
 
     private final WorkspaceRepository workspaceRepository;
@@ -20,21 +19,60 @@ public class WorkspaceServiceImpl implements WorkspaceService {
         this.workspaceRepository = workspaceRepository;
     }
 
+    // -------- WRITE OPERATIONS --------
+
     @Override
+    @Transactional
     public Workspace createWorkspace(String name, String description) {
 
-        if (workspaceRepository.existsByName(name)) {
-            throw new IllegalArgumentException("Workspace with name already exists");
+        String normalizedName = name.trim();
+
+        if (workspaceRepository.existsByName(normalizedName)) {
+            throw new DuplicateResourceException(
+                    "Workspace with name '" + normalizedName + "' already exists"
+            );
         }
 
         Workspace workspace = new Workspace();
-        workspace.setName(name);
+        workspace.setName(normalizedName);
         workspace.setDescription(description);
 
         return workspaceRepository.save(workspace);
     }
 
     @Override
+    @Transactional
+    public Workspace updateWorkspace(Long id, String name, String description) {
+
+        Workspace workspace = getWorkspaceById(id);
+
+        String normalizedName = name.trim();
+
+        if (!workspace.getName().equals(normalizedName)
+                && workspaceRepository.existsByName(normalizedName)) {
+            throw new DuplicateResourceException(
+                    "Workspace with name '" + normalizedName + "' already exists"
+            );
+        }
+
+        workspace.setName(normalizedName);
+        workspace.setDescription(description);
+
+        // No save() needed — dirty checking will persist
+        return workspace;
+    }
+
+    @Override
+    @Transactional
+    public void deleteWorkspace(Long id) {
+        Workspace workspace = getWorkspaceById(id);
+        workspaceRepository.delete(workspace);
+    }
+
+    // -------- READ OPERATIONS --------
+
+    @Override
+    @Transactional(readOnly = true)
     public Workspace getWorkspaceById(Long id) {
         return workspaceRepository.findById(id)
                 .orElseThrow(() ->
@@ -45,52 +83,9 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Workspace> getAllWorkspaces() {
         return workspaceRepository.findAll();
     }
-
-
-
-
-    @Override
-    public Workspace updateWorkspace(
-            Long id,
-            String name,
-            String description
-    ) {
-        Workspace workspace = workspaceRepository.findById(id)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Workspace not found with id: " + id
-                        )
-                );
-
-        String normalizedName = name.trim();
-
-        boolean nameExists = workspaceRepository.existsByName(normalizedName);
-
-        if (nameExists && !workspace.getName().equals(normalizedName)) {
-            throw new DuplicateResourceException(
-                    "Workspace with name '" + normalizedName + "' already exists"
-            );
-        }
-
-        workspace.setName(normalizedName);
-        workspace.setDescription(description);
-
-        return workspaceRepository.save(workspace);
-    }
-
-
-    @Override
-    public void deleteWorkspace(Long id) {
-        if (!workspaceRepository.existsById(id)) {
-            throw new ResourceNotFoundException(
-                    "Workspace not found with id: " + id
-            );
-        }
-        workspaceRepository.deleteById(id);
-    }
-
-
 }
+
