@@ -14,6 +14,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -80,7 +84,7 @@ public class WorkspaceController {
 
     // -------- GET ALL --------
     @Operation(
-            summary = "Get all workspaces",
+            summary = "Get paginated list of workspaces",
             description = "Returns all workspaces (empty list if none exist)"
     )
     @ApiResponses({
@@ -100,11 +104,15 @@ public class WorkspaceController {
             )
     })
     @GetMapping
-    public List<WorkspaceResponse> getAll() {
-        return workspaceService.getAllWorkspaces()
-                .stream()
-                .map(this::toResponse)
-                .toList();
+    public Page<WorkspaceResponse> getAll(
+            @PageableDefault(
+                    size = 10,
+                    sort = "createdAt",
+                    direction = Sort.Direction.DESC
+            ) Pageable pageable
+    ) {
+        return workspaceService.getAllWorkspaces(pageable)
+                .map(this::toResponse);
     }
 
     // -------- UPDATE --------

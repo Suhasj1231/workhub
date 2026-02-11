@@ -5,9 +5,12 @@ import com.smj.workhub.common.exception.ResourceNotFoundException;
 import com.smj.workhub.workspace.entity.Workspace;
 import com.smj.workhub.workspace.repository.WorkspaceRepository;
 import com.smj.workhub.workspace.service.WorkspaceService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 
 @Service
@@ -27,7 +30,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
 
         String normalizedName = name.trim();
 
-        if (workspaceRepository.existsByName(normalizedName)) {
+        if (workspaceRepository.existsByNameAndDeletedFalse(normalizedName)) {
             throw new DuplicateResourceException(
                     "Workspace with name '" + normalizedName + "' already exists"
             );
@@ -49,7 +52,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
         String normalizedName = name.trim();
 
         if (!workspace.getName().equals(normalizedName)
-                && workspaceRepository.existsByName(normalizedName)) {
+                && workspaceRepository.existsByNameAndDeletedFalse(normalizedName)) {
             throw new DuplicateResourceException(
                     "Workspace with name '" + normalizedName + "' already exists"
             );
@@ -62,19 +65,31 @@ public class WorkspaceServiceImpl implements WorkspaceService {
         return workspace;
     }
 
-    @Override
     @Transactional
+    @Override
     public void deleteWorkspace(Long id) {
-        Workspace workspace = getWorkspaceById(id);
-        workspaceRepository.delete(workspace);
+        Workspace workspace = workspaceRepository.findByIdAndDeletedFalse(id)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Workspace not found with id: " + id
+                        )
+                );
+
+        if (workspace.isDeleted()) {
+            return; // idempotent delete
+        }
+
+        workspace.setDeleted(true);
+        workspace.setDeletedAt(Instant.now());
     }
+
 
     // -------- READ OPERATIONS --------
 
     @Override
     @Transactional(readOnly = true)
     public Workspace getWorkspaceById(Long id) {
-        return workspaceRepository.findById(id)
+        return workspaceRepository.findByIdAndDeletedFalse(id)
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
                                 "Workspace not found with id: " + id
@@ -82,10 +97,13 @@ public class WorkspaceServiceImpl implements WorkspaceService {
                 );
     }
 
+
+
     @Override
     @Transactional(readOnly = true)
-    public List<Workspace> getAllWorkspaces() {
-        return workspaceRepository.findAll();
+    public Page<Workspace> getAllWorkspaces(Pageable pageable) {
+        return workspaceRepository.findAllByDeletedFalse(pageable);
     }
+
 }
 

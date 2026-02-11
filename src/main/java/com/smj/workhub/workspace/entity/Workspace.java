@@ -7,7 +7,16 @@ import java.time.Instant;
 @Table(
         name = "workspaces",
         uniqueConstraints = {
-                @UniqueConstraint(name = "uk_workspace_name", columnNames = "name")
+                @UniqueConstraint(
+                        name = "uk_workspace_name",
+                        columnNames = "name"
+                )
+        },
+        indexes = {
+                @Index(
+                        name = "idx_workspace_is_deleted",
+                        columnList = "is_deleted"
+                )
         }
 )
 public class Workspace {
@@ -27,6 +36,14 @@ public class Workspace {
 
     @Column(nullable = false)
     private Instant updatedAt;
+
+    // ---- Soft Delete Fields ----
+
+    @Column(name = "is_deleted", nullable = false)
+    private boolean deleted = false;
+
+    @Column
+    private Instant deletedAt;
 
     // ---- lifecycle hooks ----
 
@@ -70,5 +87,21 @@ public class Workspace {
 
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public boolean isDeleted() {
+        return deleted;
+    }
+
+    public void setDeleted(boolean deleted) {
+        this.deleted = deleted;
+    }
+
+    public Instant getDeletedAt() {
+        return deletedAt;
+    }
+
+    public void setDeletedAt(Instant deletedAt) {
+        this.deletedAt = deletedAt;
     }
 }

@@ -1,6 +1,8 @@
 package com.smj.workhub.workspace.service;
 
 import com.smj.workhub.workspace.entity.Workspace;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
@@ -10,7 +12,8 @@ public interface WorkspaceService {
 
     Workspace getWorkspaceById(Long id);
 
-    List<Workspace> getAllWorkspaces();
+
+    Page<Workspace> getAllWorkspaces(Pageable pageable);
 
     Workspace updateWorkspace(Long id, String name, String description);
 
