@@ -7,6 +7,7 @@ import com.smj.workhub.workspace.dto.WorkspaceResponse;
 import com.smj.workhub.workspace.entity.Workspace;
 import com.smj.workhub.workspace.service.WorkspaceService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -85,35 +86,40 @@ public class WorkspaceController {
     // -------- GET ALL --------
     @Operation(
             summary = "Get paginated list of workspaces",
-            description = "Returns all workspaces (empty list if none exist)"
+            description = "Returns paginated workspaces with optional filtering by name and deleted flag"
     )
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
-                    description = "List of workspaces",
+                    description = "Paginated list of workspaces",
                     content = @Content(
                             array = @ArraySchema(
                                     schema = @Schema(implementation = WorkspaceResponse.class)
                             )
-                    ))
-            ,
-            @ApiResponse(
-                    responseCode = "404",
-                    description = "Workspace not found",
-                    content = @Content(schema = @Schema(implementation = ApiError.class))
+                    )
             )
     })
     @GetMapping
     public Page<WorkspaceResponse> getAll(
+
+            @Parameter(description = "Filter by deleted flag (true/false)")
+            @RequestParam(required = false) Boolean deleted,
+
+            @Parameter(description = "Filter by workspace name (contains, case-insensitive)")
+            @RequestParam(required = false) String name,
+
             @PageableDefault(
                     size = 10,
                     sort = "createdAt",
                     direction = Sort.Direction.DESC
-            ) Pageable pageable
+            )
+            Pageable pageable
     ) {
-        return workspaceService.getAllWorkspaces(pageable)
+        return workspaceService
+                .getAllWorkspaces(deleted, name, pageable)
                 .map(this::toResponse);
     }
+
 
     // -------- UPDATE --------
     @Operation(

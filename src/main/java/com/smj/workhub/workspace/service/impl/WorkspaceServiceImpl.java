@@ -5,8 +5,10 @@ import com.smj.workhub.common.exception.ResourceNotFoundException;
 import com.smj.workhub.workspace.entity.Workspace;
 import com.smj.workhub.workspace.repository.WorkspaceRepository;
 import com.smj.workhub.workspace.service.WorkspaceService;
+import com.smj.workhub.workspace.specification.WorkspaceSpecification;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -101,9 +103,31 @@ public class WorkspaceServiceImpl implements WorkspaceService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<Workspace> getAllWorkspaces(Pageable pageable) {
-        return workspaceRepository.findAllByDeletedFalse(pageable);
+    public Page<Workspace> getAllWorkspaces(
+            Boolean deleted,
+            String name,
+            Pageable pageable
+    ) {
+
+        Specification<Workspace> spec = Specification.where(null);
+
+        // Apply deleted filter (if provided)
+        if (deleted != null) {
+            spec = spec.and(
+                    WorkspaceSpecification.hasDeleted(deleted)
+            );
+        }
+
+        // Apply name filter (if provided)
+        if (name != null && !name.isBlank()) {
+            spec = spec.and(
+                    WorkspaceSpecification.nameContains(name)
+            );
+        }
+
+        return workspaceRepository.findAll(spec, pageable);
     }
+
 
 }
 

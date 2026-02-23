@@ -4,16 +4,18 @@ import com.smj.workhub.workspace.entity.Workspace;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
-import java.util.List;
-
 public interface WorkspaceService {
 
     Workspace createWorkspace(String name, String description);
 
     Workspace getWorkspaceById(Long id);
 
-
-    Page<Workspace> getAllWorkspaces(Pageable pageable);
+    // 🔥 Updated method (filtering + pagination + sorting)
+    Page<Workspace> getAllWorkspaces(
+            Boolean deleted,
+            String name,
+            Pageable pageable
+    );
 
     Workspace updateWorkspace(Long id, String name, String description);
 
