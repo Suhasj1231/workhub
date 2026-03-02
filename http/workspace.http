@@ -1,0 +1,39 @@
+### Create Workspace
+POST http://localhost:8080/api/v1/workspaces
+Content-Type: application/json
+
+{
+  "name": "Engineering",
+  "description": "Core engineering workspace"
+}
+
+###
+
+### Get All Workspaces (Paginated)
+GET http://localhost:8080/api/v1/workspaces?page=0&size=5&sort=createdAt,desc
+
+###
+
+### Get Workspace By ID
+GET http://localhost:8080/api/v1/workspaces/1
+
+###
+
+### Update Workspace
+PUT http://localhost:8080/api/v1/workspaces/1
+Content-Type: application/json
+
+{
+  "name": "Engineering Updated",
+  "description": "Updated description"
+}
+
+###
+
+### Soft Delete Workspace
+DELETE http://localhost:8080/api/v1/workspaces/1
+
+###
+
+### Restore Workspace
+PATCH http://localhost:8080/api/v1/workspaces/1/restore
