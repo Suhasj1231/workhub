@@ -26,7 +26,7 @@ import java.util.List;
 
 @Tag(name = "Workspace", description = "Workspace management APIs")
 @RestController
-@RequestMapping("/api/workspaces")
+@RequestMapping("/api/v1/workspaces")
 public class WorkspaceController {
 
     private final WorkspaceService workspaceService;
@@ -176,5 +176,44 @@ public class WorkspaceController {
                 workspace.getCreatedAt(),
                 workspace.getUpdatedAt()
         );
+    }
+
+    @Operation(
+            summary = "Restore deleted workspace",
+            description = "Restores a soft-deleted workspace"
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Workspace restored successfully",
+                    content = @Content(
+                            schema = @Schema(implementation = WorkspaceResponse.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Workspace not found",
+                    content = @Content(
+                            schema = @Schema(implementation = ApiError.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Workspace already active",
+                    content = @Content(
+                            schema = @Schema(implementation = ApiError.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "409",
+                    description = "Duplicate workspace name conflict",
+                    content = @Content(
+                            schema = @Schema(implementation = ApiError.class)
+                    )
+            )
+    })
+    @PatchMapping("/{id}/restore")
+    public WorkspaceResponse restoreWorkspace(@PathVariable Long id) {
+        return toResponse(workspaceService.restoreWorkspace(id));
     }
 }
