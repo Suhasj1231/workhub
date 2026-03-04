@@ -76,5 +76,19 @@ public class GlobalExceptionHandler {
                 Instant.now()
         );
     }
+
+    @ExceptionHandler(IllegalStateException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ApiError handleIllegalState(
+            IllegalStateException ex,
+            HttpServletRequest request
+    ) {
+        return new ApiError(
+                HttpStatus.BAD_REQUEST.value(),
+                ex.getMessage(),
+                request.getRequestURI(),
+                Instant.now()
+        );
+    }
 }
 

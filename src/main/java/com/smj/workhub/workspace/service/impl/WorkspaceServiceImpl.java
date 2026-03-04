@@ -128,6 +128,39 @@ public class WorkspaceServiceImpl implements WorkspaceService {
         return workspaceRepository.findAll(spec, pageable);
     }
 
+    // Restoring the workspace
+    @Override
+    @Transactional
+    public Workspace restoreWorkspace(Long id) {
+
+        Workspace workspace = workspaceRepository.findById(id)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Workspace not found with id: " + id
+                        )
+                );
+
+        if (!workspace.isDeleted()) {
+            throw new IllegalStateException(
+                    "Workspace is already active"
+            );
+        }
+
+        // Check name conflict with active workspaces
+        boolean nameExists = workspaceRepository
+                .existsByNameAndDeletedFalse(workspace.getName());
+
+        if (nameExists) {
+            throw new DuplicateResourceException(
+                    "Active workspace with same name already exists"
+            );
+        }
+
+        workspace.setDeleted(false);
+
+        return workspace;
+    }
+
 
 }
 

@@ -19,4 +19,6 @@ public interface WorkspaceRepository
     // Check duplicate name among active workspaces
     boolean existsByNameAndDeletedFalse(String name);
 
+    Optional<Workspace> findById(Long id);
+
 }

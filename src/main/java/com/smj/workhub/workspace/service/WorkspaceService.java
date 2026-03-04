@@ -20,4 +20,6 @@ public interface WorkspaceService {
     Workspace updateWorkspace(Long id, String name, String description);
 
     void deleteWorkspace(Long id);
+
+    Workspace restoreWorkspace(Long id);
 }
