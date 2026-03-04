@@ -12,17 +12,20 @@ import java.time.Instant;
         name = "projects",
         uniqueConstraints = {
                 @UniqueConstraint(
-                        name = "uk_workspace_project_name",
+                        name = "uk_projects_workspace_name",
                         columnNames = {"workspace_id", "name"}
                 )
         },
         indexes = {
-                @Index(name = "idx_project_workspace_id", columnList = "workspace_id"),
-                @Index(name = "idx_project_deleted", columnList = "deleted"),
-                @Index(name = "idx_project_created_at", columnList = "created_at")
+                @Index(
+                        name = "idx_projects_workspace_deleted_created",
+                        columnList = "workspace_id, deleted, created_at"
+                )
         }
 )
 public class Project {
+
+    // -------- PRIMARY KEY --------
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -51,7 +54,7 @@ public class Project {
     @Column(nullable = false)
     private boolean deleted = false;
 
-    // -------- AUDIT --------
+    // -------- AUDIT FIELDS --------
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false, nullable = false)
@@ -61,5 +64,63 @@ public class Project {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-    // -------- GETTERS / SETTERS --------
+    // -------- CONSTRUCTORS --------
+
+    protected Project() {
+        // Required by JPA
+    }
+
+    public Project(Workspace workspace, String name, String description) {
+        this.workspace = workspace;
+        this.name = name;
+        this.description = description;
+    }
+
+    // -------- GETTERS --------
+
+    public Long getId() {
+        return id;
+    }
+
+    public Workspace getWorkspace() {
+        return workspace;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public boolean isDeleted() {
+        return deleted;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
+
+    // -------- SETTERS --------
+
+    public void setWorkspace(Workspace workspace) {
+        this.workspace = workspace;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public void setDeleted(boolean deleted) {
+        this.deleted = deleted;
+    }
 }
