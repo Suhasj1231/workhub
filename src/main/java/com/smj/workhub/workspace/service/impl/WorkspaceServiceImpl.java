@@ -11,12 +11,16 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
 import java.util.List;
 
 @Service
 public class WorkspaceServiceImpl implements WorkspaceService {
+
+    private static final Logger log = LoggerFactory.getLogger(WorkspaceServiceImpl.class);
 
     private final WorkspaceRepository workspaceRepository;
 
@@ -29,6 +33,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     @Override
     @Transactional
     public Workspace createWorkspace(String name, String description) {
+        log.info("Creating workspace with name={}", name);
 
         String normalizedName = name.trim();
 
@@ -42,12 +47,15 @@ public class WorkspaceServiceImpl implements WorkspaceService {
         workspace.setName(normalizedName);
         workspace.setDescription(description);
 
-        return workspaceRepository.save(workspace);
+        Workspace saved = workspaceRepository.save(workspace);
+        log.info("Workspace created successfully with id={}", saved.getId());
+        return saved;
     }
 
     @Override
     @Transactional
     public Workspace updateWorkspace(Long id, String name, String description) {
+        log.info("Updating workspace id={}", id);
 
         Workspace workspace = getWorkspaceById(id);
 
@@ -63,6 +71,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
         workspace.setName(normalizedName);
         workspace.setDescription(description);
 
+        log.info("Workspace updated successfully id={}", workspace.getId());
         // No save() needed — dirty checking will persist
         return workspace;
     }
@@ -70,6 +79,8 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     @Transactional
     @Override
     public void deleteWorkspace(Long id) {
+        log.warn("Deleting workspace id={}", id);
+
         Workspace workspace = workspaceRepository.findByIdAndDeletedFalse(id)
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
@@ -81,6 +92,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
             return; // idempotent delete
         }
 
+        log.info("Soft deleting workspace id={}", workspace.getId());
         workspace.setDeleted(true);
         workspace.setDeletedAt(Instant.now());
     }
@@ -91,6 +103,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     @Override
     @Transactional(readOnly = true)
     public Workspace getWorkspaceById(Long id) {
+        log.debug("Fetching workspace id={}", id);
         return workspaceRepository.findByIdAndDeletedFalse(id)
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
@@ -108,6 +121,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
             String name,
             Pageable pageable
     ) {
+        log.debug("Fetching workspaces with filters deleted={}, name={}", deleted, name);
 
         Specification<Workspace> spec = Specification.where(null);
 
@@ -132,6 +146,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     @Override
     @Transactional
     public Workspace restoreWorkspace(Long id) {
+        log.info("Restoring workspace id={}", id);
 
         Workspace workspace = workspaceRepository.findById(id)
                 .orElseThrow(() ->
@@ -156,6 +171,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
             );
         }
 
+        log.info("Workspace restored successfully id={}", workspace.getId());
         workspace.setDeleted(false);
 
         return workspace;
@@ -163,4 +179,3 @@ public class WorkspaceServiceImpl implements WorkspaceService {
 
 
 }
-
