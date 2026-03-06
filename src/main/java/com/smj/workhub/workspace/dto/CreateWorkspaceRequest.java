@@ -8,12 +8,11 @@ import jakarta.validation.constraints.Size;
 public record CreateWorkspaceRequest(
 
         @Schema(description = "Unique workspace name", example = "Engineering")
-        @NotBlank
-        @Size(max = 100)
+        @NotBlank(message = "Workspace name must not be blank")
+        @Size(min = 3, max = 100, message = "Workspace name must be between 3 and 100 characters")
         String name,
 
         @Schema(description = "Optional description", example = "Core engineering team")
-        @Size(max = 500)
+        @Size(max = 500, message = "Description cannot exceed 500 characters")
         String description
 ) {}
-

@@ -11,14 +11,14 @@ public record UpdateWorkspaceRequest(
                 description = "Updated workspace name (must be unique)",
                 example = "Engineering Team"
         )
-        @NotBlank
-        @Size(max = 100)
+        @NotBlank(message = "Workspace name must not be blank")
+        @Size(min = 3, max = 100, message = "Workspace name must be between 3 and 100 characters")
         String name,
 
         @Schema(
                 description = "Updated workspace description",
                 example = "Handles all engineering initiatives"
         )
-        @Size(max = 500)
+        @Size(max = 500, message = "Description cannot exceed 500 characters")
         String description
 ) {}

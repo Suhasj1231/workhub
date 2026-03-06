@@ -13,10 +13,14 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 @Transactional
 public class ProjectServiceImpl implements ProjectService {
+
+    private static final Logger log = LoggerFactory.getLogger(ProjectServiceImpl.class);
 
     private final ProjectRepository projectRepository;
     private final WorkspaceRepository workspaceRepository;
@@ -33,6 +37,7 @@ public class ProjectServiceImpl implements ProjectService {
 
     @Override
     public Project createProject(Long workspaceId, String name, String description) {
+        log.info("Creating project name={} in workspaceId={}", name, workspaceId);
 
         Workspace workspace = workspaceRepository
                 .findByIdAndDeletedFalse(workspaceId)
@@ -50,7 +55,9 @@ public class ProjectServiceImpl implements ProjectService {
 
         Project project = new Project(workspace, name.trim(), description);
 
-        return projectRepository.save(project);
+        Project saved = projectRepository.save(project);
+        log.info("Project created successfully id={} workspaceId={}", saved.getId(), workspaceId);
+        return saved;
     }
 
     // -------- GET BY ID --------
@@ -58,6 +65,7 @@ public class ProjectServiceImpl implements ProjectService {
     @Override
     @Transactional(readOnly = true)
     public Project getProjectById(Long id) {
+        log.debug("Fetching project id={}", id);
         return projectRepository.findByIdAndDeletedFalse(id)
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
@@ -76,6 +84,7 @@ public class ProjectServiceImpl implements ProjectService {
             Boolean includeDeleted,
             Pageable pageable
     ) {
+        log.debug("Fetching projects for workspaceId={} search={} includeDeleted={}", workspaceId, search, includeDeleted);
 
         Specification<Project> specification =
                 ProjectSpecification.build(workspaceId, search, includeDeleted);
@@ -87,6 +96,7 @@ public class ProjectServiceImpl implements ProjectService {
 
     @Override
     public Project updateProject(Long id, String name, String description) {
+        log.info("Updating project id={}", id);
 
         Project project = projectRepository.findByIdAndDeletedFalse(id)
                 .orElseThrow(() ->
@@ -112,6 +122,7 @@ public class ProjectServiceImpl implements ProjectService {
         project.setName(normalizedName);
         project.setDescription(description);
 
+        log.info("Project updated successfully id={}", project.getId());
         return project;
     }
 
@@ -119,6 +130,7 @@ public class ProjectServiceImpl implements ProjectService {
 
     @Override
     public void deleteProject(Long id) {
+        log.warn("Soft deleting project id={}", id);
 
         Project project = projectRepository.findByIdAndDeletedFalse(id)
                 .orElseThrow(() ->
@@ -134,6 +146,7 @@ public class ProjectServiceImpl implements ProjectService {
 
     @Override
     public Project restoreProject(Long id) {
+        log.info("Restoring project id={}", id);
 
         Project project = projectRepository.findByIdAndDeletedTrue(id)
                 .orElseThrow(() ->
@@ -144,6 +157,7 @@ public class ProjectServiceImpl implements ProjectService {
 
         project.setDeleted(false);
 
+        log.info("Project restored successfully id={}", project.getId());
         return project;
     }
 }
