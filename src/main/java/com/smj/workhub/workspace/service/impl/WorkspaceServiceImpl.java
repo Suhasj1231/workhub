@@ -3,9 +3,14 @@ package com.smj.workhub.workspace.service.impl;
 import com.smj.workhub.common.exception.DuplicateResourceException;
 import com.smj.workhub.common.exception.ResourceNotFoundException;
 import com.smj.workhub.workspace.entity.Workspace;
+import com.smj.workhub.workspace.entity.WorkspaceMember;
+import com.smj.workhub.workspace.entity.WorkspaceRole;
 import com.smj.workhub.workspace.repository.WorkspaceRepository;
+import com.smj.workhub.workspace.repository.WorkspaceMemberRepository;
 import com.smj.workhub.workspace.service.WorkspaceService;
 import com.smj.workhub.workspace.specification.WorkspaceSpecification;
+import com.smj.workhub.user.entity.User;
+import com.smj.workhub.user.repository.UserRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -13,6 +18,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.time.Instant;
 import java.util.List;
@@ -23,9 +30,17 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     private static final Logger log = LoggerFactory.getLogger(WorkspaceServiceImpl.class);
 
     private final WorkspaceRepository workspaceRepository;
+    private final WorkspaceMemberRepository workspaceMemberRepository;
+    private final UserRepository userRepository;
 
-    public WorkspaceServiceImpl(WorkspaceRepository workspaceRepository) {
+    public WorkspaceServiceImpl(
+            WorkspaceRepository workspaceRepository,
+            WorkspaceMemberRepository workspaceMemberRepository,
+            UserRepository userRepository
+    ) {
         this.workspaceRepository = workspaceRepository;
+        this.workspaceMemberRepository = workspaceMemberRepository;
+        this.userRepository = userRepository;
     }
 
     // -------- WRITE OPERATIONS --------
@@ -48,7 +63,22 @@ public class WorkspaceServiceImpl implements WorkspaceService {
         workspace.setDescription(description);
 
         Workspace saved = workspaceRepository.save(workspace);
-        log.info("Workspace created successfully with id={}", saved.getId());
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication.getName();
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Authenticated user not found"));
+
+        WorkspaceMember membership = new WorkspaceMember();
+        membership.setWorkspace(saved);
+        membership.setUser(user);
+        membership.setRole(WorkspaceRole.OWNER);
+
+        workspaceMemberRepository.save(membership);
+
+        log.info("Workspace created successfully with id={} and owner={}", saved.getId(), user.getId());
+
         return saved;
     }
 

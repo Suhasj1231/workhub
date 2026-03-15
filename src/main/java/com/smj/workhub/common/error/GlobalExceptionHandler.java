@@ -2,6 +2,7 @@ package com.smj.workhub.common.error;
 
 import com.smj.workhub.common.exception.DuplicateResourceException;
 import com.smj.workhub.common.exception.ResourceNotFoundException;
+import com.smj.workhub.common.exception.AccessDeniedException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -62,6 +63,19 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(AccessDeniedException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public ApiError handleAccessDenied(
+            AccessDeniedException ex,
+            HttpServletRequest request
+    ) {
+        return new ApiError(
+                HttpStatus.FORBIDDEN.value(),
+                ex.getMessage(),
+                request.getRequestURI(),
+                Instant.now()
+        );
+    }
 
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -91,4 +105,3 @@ public class GlobalExceptionHandler {
         );
     }
 }
-

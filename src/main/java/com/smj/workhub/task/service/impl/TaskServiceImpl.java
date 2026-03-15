@@ -68,12 +68,27 @@ public class TaskServiceImpl implements TaskService {
         return saved;
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Task getProjectPreview(Long projectId) {
+
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Project not found with id: " + projectId)
+                );
+
+        Task preview = new Task();
+        preview.setProject(project);
+
+        return preview;
+    }
+
     // GET TASK BY ID
     @Override
     @Transactional(readOnly = true)
     public Task getTaskById(Long id) {
         log.debug("Fetching task id={}", id);
-        return taskRepository.findByIdAndDeletedFalse(id)
+        return taskRepository.findByIdWithProjectAndWorkspace(id)
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
                                 "Task not found with id: " + id

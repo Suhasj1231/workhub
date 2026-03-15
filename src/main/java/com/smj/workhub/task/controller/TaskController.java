@@ -9,6 +9,7 @@ import com.smj.workhub.task.entity.Task;
 import com.smj.workhub.task.entity.TaskPriority;
 import com.smj.workhub.task.entity.TaskStatus;
 import com.smj.workhub.task.service.TaskService;
+import com.smj.workhub.workspace.service.WorkspaceAccessService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -31,9 +32,14 @@ import org.springframework.web.bind.annotation.*;
 public class TaskController {
 
     private final TaskService taskService;
+    private final WorkspaceAccessService workspaceAccessService;
 
-    public TaskController(TaskService taskService) {
+    public TaskController(
+            TaskService taskService,
+            WorkspaceAccessService workspaceAccessService
+    ) {
         this.taskService = taskService;
+        this.workspaceAccessService = workspaceAccessService;
     }
 
     // CREATE TASK
@@ -55,6 +61,8 @@ public class TaskController {
             @PathVariable Long projectId,
             @Valid @RequestBody CreateTaskRequest request
     ) {
+        Task taskPreview = taskService.getProjectPreview(projectId);
+        workspaceAccessService.verifyWorkspaceMember(taskPreview.getProject().getWorkspace().getId());
         Task task = taskService.createTask(projectId, request);
         return toResponse(task);
     }
@@ -86,6 +94,8 @@ public class TaskController {
                     direction = Sort.Direction.DESC
             ) Pageable pageable
     ) {
+        Task taskPreview = taskService.getProjectPreview(projectId);
+        workspaceAccessService.verifyWorkspaceAccess(taskPreview.getProject().getWorkspace().getId());
 
         return taskService.getTasks(
                         projectId,
@@ -113,7 +123,9 @@ public class TaskController {
     })
     @GetMapping("/tasks/{taskId}")
     public TaskResponse getTaskById(@PathVariable Long taskId) {
-        return toResponse(taskService.getTaskById(taskId));
+        Task task = taskService.getTaskById(taskId);
+        workspaceAccessService.verifyWorkspaceAccess(task.getProject().getWorkspace().getId());
+        return toResponse(task);
     }
 
     // UPDATE TASK
@@ -134,6 +146,8 @@ public class TaskController {
             @PathVariable Long taskId,
             @Valid @RequestBody UpdateTaskRequest request
     ) {
+        Task existing = taskService.getTaskById(taskId);
+        workspaceAccessService.verifyWorkspaceMember(existing.getProject().getWorkspace().getId());
 
         Task task = taskService.updateTask(taskId, request);
         return toResponse(task);
@@ -155,6 +169,8 @@ public class TaskController {
     @DeleteMapping("/tasks/{taskId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteTask(@PathVariable Long taskId) {
+        Task existing = taskService.getTaskById(taskId);
+        workspaceAccessService.verifyWorkspaceMember(existing.getProject().getWorkspace().getId());
         taskService.deleteTask(taskId);
     }
 
@@ -173,6 +189,8 @@ public class TaskController {
     })
     @PatchMapping("/tasks/{taskId}/restore")
     public TaskResponse restoreTask(@PathVariable Long taskId) {
+        Task existing = taskService.getTaskById(taskId);
+        workspaceAccessService.verifyWorkspaceMember(existing.getProject().getWorkspace().getId());
         Task task = taskService.restoreTask(taskId);
         return toResponse(task);
     }
@@ -200,6 +218,9 @@ public class TaskController {
             @PathVariable Long taskId,
             @Valid @RequestBody UpdateTaskStatusRequest request
     ) {
+        Task existing = taskService.getTaskById(taskId);
+        workspaceAccessService.verifyWorkspaceMember(existing.getProject().getWorkspace().getId());
+
         Task task = taskService.updateTaskStatus(taskId, request.status());
         return toResponse(task);
     }
@@ -218,4 +239,5 @@ public class TaskController {
                 task.getUpdatedAt()
         );
     }
+
 }

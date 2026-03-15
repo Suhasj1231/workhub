@@ -6,6 +6,7 @@ import com.smj.workhub.workspace.dto.UpdateWorkspaceRequest;
 import com.smj.workhub.workspace.dto.WorkspaceResponse;
 import com.smj.workhub.workspace.entity.Workspace;
 import com.smj.workhub.workspace.service.WorkspaceService;
+import com.smj.workhub.workspace.service.WorkspaceAccessService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -30,9 +31,14 @@ import java.util.List;
 public class WorkspaceController {
 
     private final WorkspaceService workspaceService;
+    private final WorkspaceAccessService workspaceAccessService;
 
-    public WorkspaceController(WorkspaceService workspaceService) {
+    public WorkspaceController(
+            WorkspaceService workspaceService,
+            WorkspaceAccessService workspaceAccessService
+    ) {
         this.workspaceService = workspaceService;
+        this.workspaceAccessService = workspaceAccessService;
     }
 
     // -------- CREATE --------
@@ -80,6 +86,7 @@ public class WorkspaceController {
     })
     @GetMapping("/{id}")
     public WorkspaceResponse getById(@PathVariable Long id) {
+        workspaceAccessService.verifyWorkspaceAccess(id);
         return toResponse(workspaceService.getWorkspaceById(id));
     }
 
@@ -140,6 +147,7 @@ public class WorkspaceController {
             @PathVariable Long id,
             @Valid @RequestBody UpdateWorkspaceRequest request
     ) {
+        workspaceAccessService.verifyWorkspaceMember(id);
         Workspace updated = workspaceService.updateWorkspace(
                 id,
                 request.name(),
@@ -164,6 +172,7 @@ public class WorkspaceController {
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long id) {
+        workspaceAccessService.verifyWorkspaceOwner(id);
         workspaceService.deleteWorkspace(id);
     }
 
@@ -214,6 +223,7 @@ public class WorkspaceController {
     })
     @PatchMapping("/{id}/restore")
     public WorkspaceResponse restoreWorkspace(@PathVariable Long id) {
+        workspaceAccessService.verifyWorkspaceOwner(id);
         return toResponse(workspaceService.restoreWorkspace(id));
     }
 }
