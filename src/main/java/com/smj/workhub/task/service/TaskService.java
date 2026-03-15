@@ -12,6 +12,12 @@ public interface TaskService {
 
     Task createTask(Long projectId, CreateTaskRequest request);
 
+    /**
+     * Fetches a lightweight preview of a task via project to determine workspace access.
+     * Used by controllers to verify workspace membership before performing task operations.
+     */
+    Task getProjectPreview(Long projectId);
+
     Task getTaskById(Long id);
 
     Page<Task> getTasks(

@@ -6,7 +6,6 @@ spring:
     url: jdbc:postgresql://localhost:5432/workhub
     username: workhub_user
     password: ${DB_PASSWORD}
-
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
@@ -17,5 +16,17 @@ spring:
       hibernate:
         format_sql: true
 
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: workhub7004@gmail.com
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
 server:
   port: 8080
+
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: 3600000

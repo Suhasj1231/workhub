@@ -21,14 +21,21 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import com.smj.workhub.common.error.ApiError;
 
+import com.smj.workhub.workspace.service.WorkspaceAccessService;
+
 @RestController
 @RequestMapping("/api/v1")
 public class ProjectController {
 
     private final ProjectService projectService;
+    private final WorkspaceAccessService workspaceAccessService;
 
-    public ProjectController(ProjectService projectService) {
+    public ProjectController(
+            ProjectService projectService,
+            WorkspaceAccessService workspaceAccessService
+    ) {
         this.projectService = projectService;
+        this.workspaceAccessService = workspaceAccessService;
     }
 
     // -------- CREATE --------
@@ -60,6 +67,8 @@ public class ProjectController {
             @PathVariable Long workspaceId,
             @Valid @RequestBody CreateProjectRequest request
     ) {
+        workspaceAccessService.verifyWorkspaceMember(workspaceId);
+
         Project project = projectService.createProject(
                 workspaceId,
                 request.name(),
@@ -102,6 +111,8 @@ public class ProjectController {
                     direction = Sort.Direction.DESC
             ) Pageable pageable
     ) {
+        workspaceAccessService.verifyWorkspaceAccess(workspaceId);
+
         return projectService
                 .getProjects(workspaceId, search, includeDeleted, pageable)
                 .map(this::toResponse);
@@ -127,7 +138,9 @@ public class ProjectController {
     })
     @GetMapping("/projects/{projectId}")
     public ProjectResponse getById(@PathVariable Long projectId) {
-        return toResponse(projectService.getProjectById(projectId));
+        Project project = projectService.getProjectById(projectId);
+        workspaceAccessService.verifyWorkspaceAccess(project.getWorkspace().getId());
+        return toResponse(project);
     }
 
     // -------- UPDATE --------
@@ -158,6 +171,9 @@ public class ProjectController {
             @PathVariable Long projectId,
             @Valid @RequestBody UpdateProjectRequest request
     ) {
+        Project existing = projectService.getProjectById(projectId);
+        workspaceAccessService.verifyWorkspaceAdmin(existing.getWorkspace().getId());
+
         Project project = projectService.updateProject(
                 projectId,
                 request.name(),
@@ -187,6 +203,8 @@ public class ProjectController {
     @DeleteMapping("/projects/{projectId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long projectId) {
+        Project existing = projectService.getProjectById(projectId);
+        workspaceAccessService.verifyWorkspaceAdmin(existing.getWorkspace().getId());
         projectService.deleteProject(projectId);
     }
 
@@ -210,7 +228,9 @@ public class ProjectController {
     })
     @PatchMapping("/projects/{projectId}/restore")
     public ProjectResponse restore(@PathVariable Long projectId) {
-        return toResponse(projectService.restoreProject(projectId));
+        Project project = projectService.restoreProject(projectId);
+        workspaceAccessService.verifyWorkspaceAdmin(project.getWorkspace().getId());
+        return toResponse(project);
     }
 
     // -------- MAPPER --------
@@ -226,8 +246,5 @@ public class ProjectController {
                 project.getUpdatedAt()
         );
     }
+
 }
-
-
-
-
