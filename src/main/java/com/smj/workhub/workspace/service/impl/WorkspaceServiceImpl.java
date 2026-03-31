@@ -11,6 +11,9 @@ import com.smj.workhub.workspace.service.WorkspaceService;
 import com.smj.workhub.workspace.specification.WorkspaceSpecification;
 import com.smj.workhub.user.entity.User;
 import com.smj.workhub.user.repository.UserRepository;
+import com.smj.workhub.activity.service.ActivityService;
+import com.smj.workhub.activity.entity.ActivityAction;
+import com.smj.workhub.security.principal.UserPrincipal;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -32,15 +35,18 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     private final WorkspaceRepository workspaceRepository;
     private final WorkspaceMemberRepository workspaceMemberRepository;
     private final UserRepository userRepository;
+    private final ActivityService activityService;
 
     public WorkspaceServiceImpl(
             WorkspaceRepository workspaceRepository,
             WorkspaceMemberRepository workspaceMemberRepository,
-            UserRepository userRepository
+            UserRepository userRepository,
+            ActivityService activityService
     ) {
         this.workspaceRepository = workspaceRepository;
         this.workspaceMemberRepository = workspaceMemberRepository;
         this.userRepository = userRepository;
+        this.activityService = activityService;
     }
 
     // -------- WRITE OPERATIONS --------
@@ -77,6 +83,17 @@ public class WorkspaceServiceImpl implements WorkspaceService {
 
         workspaceMemberRepository.save(membership);
 
+        Long userId = user.getId();
+        activityService.logActivity(
+                userId,
+                ActivityAction.WORKSPACE_CREATED,
+                saved.getId(),
+                null,
+                null,
+                "Workspace '" + saved.getName() + "' created",
+                null
+        );
+
         log.info("Workspace created successfully with id={} and owner={}", saved.getId(), user.getId());
 
         return saved;
@@ -100,6 +117,17 @@ public class WorkspaceServiceImpl implements WorkspaceService {
 
         workspace.setName(normalizedName);
         workspace.setDescription(description);
+
+        Long userId = getCurrentUserId();
+        activityService.logActivity(
+                userId,
+                ActivityAction.WORKSPACE_UPDATED,
+                workspace.getId(),
+                null,
+                null,
+                "Workspace '" + workspace.getName() + "' updated",
+                null
+        );
 
         log.info("Workspace updated successfully id={}", workspace.getId());
         // No save() needed — dirty checking will persist
@@ -125,6 +153,17 @@ public class WorkspaceServiceImpl implements WorkspaceService {
         log.info("Soft deleting workspace id={}", workspace.getId());
         workspace.setDeleted(true);
         workspace.setDeletedAt(Instant.now());
+
+        Long userId = getCurrentUserId();
+        activityService.logActivity(
+                userId,
+                ActivityAction.WORKSPACE_DELETED,
+                workspace.getId(),
+                null,
+                null,
+                "Workspace '" + workspace.getName() + "' deleted",
+                null
+        );
     }
 
 
@@ -201,11 +240,30 @@ public class WorkspaceServiceImpl implements WorkspaceService {
             );
         }
 
-        log.info("Workspace restored successfully id={}", workspace.getId());
         workspace.setDeleted(false);
+
+        Long userId = getCurrentUserId();
+        activityService.logActivity(
+                userId,
+                ActivityAction.WORKSPACE_RESTORED,
+                workspace.getId(),
+                null,
+                null,
+                "Workspace '" + workspace.getName() + "' restored",
+                null
+        );
+
+        log.info("Workspace restored successfully id={}", workspace.getId());
 
         return workspace;
     }
 
+    private Long getCurrentUserId() {
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (principal instanceof UserPrincipal userPrincipal) {
+            return userPrincipal.getId();
+        }
+        throw new RuntimeException("User not authenticated");
+    }
 
 }

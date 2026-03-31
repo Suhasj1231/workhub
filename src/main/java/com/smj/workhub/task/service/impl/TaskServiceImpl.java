@@ -3,6 +3,7 @@ package com.smj.workhub.task.service.impl;
 import com.smj.workhub.common.exception.ResourceNotFoundException;
 import com.smj.workhub.project.entity.Project;
 import com.smj.workhub.project.repository.ProjectRepository;
+import com.smj.workhub.security.principal.UserPrincipal;
 import com.smj.workhub.task.dto.CreateTaskRequest;
 import com.smj.workhub.task.dto.UpdateTaskRequest;
 import com.smj.workhub.task.entity.Task;
@@ -19,6 +20,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.smj.workhub.activity.service.ActivityService;
+import com.smj.workhub.activity.entity.ActivityAction;
+import org.springframework.security.core.context.SecurityContextHolder;
+
 @Service
 @Transactional
 public class TaskServiceImpl implements TaskService {
@@ -27,13 +32,16 @@ public class TaskServiceImpl implements TaskService {
 
     private final TaskRepository taskRepository;
     private final ProjectRepository projectRepository;
+    private final ActivityService activityService;
 
     public TaskServiceImpl(
             TaskRepository taskRepository,
-            ProjectRepository projectRepository
+            ProjectRepository projectRepository,
+            ActivityService activityService
     ) {
         this.taskRepository = taskRepository;
         this.projectRepository = projectRepository;
+        this.activityService = activityService;
     }
 
     // CREATE TASK
@@ -64,6 +72,18 @@ public class TaskServiceImpl implements TaskService {
         task.setDueDate(request.dueDate());
 
         Task saved = taskRepository.save(task);
+
+        Long userId = getCurrentUserId();
+        activityService.logActivity(
+                userId,
+                ActivityAction.TASK_CREATED,
+                saved.getProject().getWorkspace().getId(),
+                saved.getProject().getId(),
+                saved.getId(),
+                "Task '" + saved.getTitle() + "' created",
+                null
+        );
+
         log.info("Task created successfully id={} projectId={}", saved.getId(), projectId);
         return saved;
     }
@@ -133,6 +153,11 @@ public class TaskServiceImpl implements TaskService {
                         )
                 );
 
+        String oldTitle = task.getTitle();
+        String oldDescription = task.getDescription();
+        TaskStatus oldStatus = task.getStatus();
+        TaskPriority oldPriority = task.getPriority();
+
         task.setTitle(request.title());
         task.setDescription(request.description());
         task.setStatus(request.status());
@@ -140,6 +165,20 @@ public class TaskServiceImpl implements TaskService {
         task.setDueDate(request.dueDate());
 
         Task updated = taskRepository.save(task);
+
+        String metadata = String.format("{\"oldTitle\":\"%s\",\"newTitle\":\"%s\",\"oldStatus\":\"%s\",\"newStatus\":\"%s\"}", oldTitle, task.getTitle(), oldStatus, task.getStatus());
+
+        Long userId = getCurrentUserId();
+        activityService.logActivity(
+                userId,
+                ActivityAction.TASK_UPDATED,
+                task.getProject().getWorkspace().getId(),
+                task.getProject().getId(),
+                task.getId(),
+                "Task '" + oldTitle + "' updated",
+                metadata
+        );
+
         log.info("Task updated successfully id={}", updated.getId());
         return updated;
     }
@@ -155,10 +194,23 @@ public class TaskServiceImpl implements TaskService {
                                 "Task not found with id: " + id
                         )
                 );
+        TaskStatus oldStatus = task.getStatus();
 
         task.setStatus(status);
 
         Task updated = taskRepository.save(task);
+
+        Long userId = getCurrentUserId();
+        activityService.logActivity(
+                userId,
+                ActivityAction.TASK_STATUS_CHANGED ,
+                task.getProject().getWorkspace().getId(),
+                task.getProject().getId(),
+                task.getId(),
+                "Task status changed from " + oldStatus + " to " + status,
+                "{\"oldStatus\":\"" + oldStatus + "\",\"newStatus\":\"" + status + "\"}"
+        );
+
         log.info("Task status updated successfully id={} status={}", updated.getId(), updated.getStatus());
         return updated;
     }
@@ -174,8 +226,19 @@ public class TaskServiceImpl implements TaskService {
                                 "Task not found with id: " + id
                         )
                 );
-
         task.setDeleted(true);
+        taskRepository.save(task);
+
+        Long userId = getCurrentUserId();
+        activityService.logActivity(
+                userId,
+                ActivityAction.TASK_DELETED,
+                task.getProject().getWorkspace().getId(),
+                task.getProject().getId(),
+                task.getId(),
+                "Task '" + task.getTitle() + "' deleted",
+                null
+        );
     }
 
     // RESTORE TASK
@@ -191,10 +254,28 @@ public class TaskServiceImpl implements TaskService {
                 );
 
         task.setDeleted(false);
-
         Task restored = taskRepository.save(task);
+
+        Long userId = getCurrentUserId();
+        activityService.logActivity(
+                userId,
+                ActivityAction.TASK_RESTORED,
+                task.getProject().getWorkspace().getId(),
+                task.getProject().getId(),
+                task.getId(),
+                "Task '" + task.getTitle() + "' restored",
+                null
+        );
+
         log.info("Task restored successfully id={}", restored.getId());
         return restored;
     }
 
+    private Long getCurrentUserId() {
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (principal instanceof UserPrincipal userPrincipal) {
+            return userPrincipal.getId();
+        }
+        throw new RuntimeException("User not authenticated");
+    }
 }
