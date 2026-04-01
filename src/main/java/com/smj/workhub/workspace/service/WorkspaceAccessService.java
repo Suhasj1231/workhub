@@ -25,4 +25,8 @@ public interface WorkspaceAccessService {
      * Verify the user is the OWNER of the workspace.
      */
     void verifyWorkspaceOwner(Long workspaceId);
+
+    void verifyProjectAccess(Long projectId);
+
+    void verifyTaskAccess(Long taskId);
 }
