@@ -84,6 +84,11 @@ public class WorkspaceServiceImpl implements WorkspaceService {
         workspaceMemberRepository.save(membership);
 
         Long userId = user.getId();
+        String metadata = String.format(
+                "{\"description\":\"%s\"}",
+                saved.getDescription()
+        );
+
         activityService.logActivity(
                 userId,
                 ActivityAction.WORKSPACE_CREATED,
@@ -91,7 +96,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
                 null,
                 null,
                 "Workspace '" + saved.getName() + "' created",
-                null
+                metadata
         );
 
         log.info("Workspace created successfully with id={} and owner={}", saved.getId(), user.getId());
@@ -106,6 +111,9 @@ public class WorkspaceServiceImpl implements WorkspaceService {
 
         Workspace workspace = getWorkspaceById(id);
 
+        String oldName = workspace.getName();
+        String oldDescription = workspace.getDescription();
+
         String normalizedName = name.trim();
 
         if (!workspace.getName().equals(normalizedName)
@@ -118,6 +126,14 @@ public class WorkspaceServiceImpl implements WorkspaceService {
         workspace.setName(normalizedName);
         workspace.setDescription(description);
 
+        String metadata = String.format(
+                "{\"oldName\":\"%s\",\"newName\":\"%s\",\"oldDescription\":\"%s\",\"newDescription\":\"%s\"}",
+                oldName,
+                workspace.getName(),
+                oldDescription,
+                workspace.getDescription()
+        );
+
         Long userId = getCurrentUserId();
         activityService.logActivity(
                 userId,
@@ -126,7 +142,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
                 null,
                 null,
                 "Workspace '" + workspace.getName() + "' updated",
-                null
+                metadata
         );
 
         log.info("Workspace updated successfully id={}", workspace.getId());
@@ -161,7 +177,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
                 workspace.getId(),
                 null,
                 null,
-                "Workspace '" + workspace.getName() + "' deleted",
+                "Workspace '" + workspace.getName() + "' soft deleted",
                 null
         );
     }
@@ -241,6 +257,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
         }
 
         workspace.setDeleted(false);
+        workspace.setDeletedAt(null);
 
         Long userId = getCurrentUserId();
         activityService.logActivity(
@@ -249,7 +266,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
                 workspace.getId(),
                 null,
                 null,
-                "Workspace '" + workspace.getName() + "' restored",
+                "Workspace '" + workspace.getName() + "' restored from deleted state",
                 null
         );
 

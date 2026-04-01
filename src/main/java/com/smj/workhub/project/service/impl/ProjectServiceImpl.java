@@ -54,13 +54,14 @@ public class ProjectServiceImpl implements ProjectService {
                         )
                 );
 
-        if (projectRepository.existsByWorkspaceIdAndNameAndDeletedFalse(workspaceId, name)) {
+        String normalizedName = name.trim();
+        if (projectRepository.existsByWorkspaceIdAndNameAndDeletedFalse(workspaceId, normalizedName)) {
             throw new DuplicateResourceException(
-                    "Project with name '" + name + "' already exists in this workspace"
+                    "Project with name '" + normalizedName + "' already exists in this workspace"
             );
         }
 
-        Project project = new Project(workspace, name.trim(), description);
+        Project project = new Project(workspace, normalizedName, description);
 
         Project saved = projectRepository.save(project);
 
@@ -145,9 +146,11 @@ public class ProjectServiceImpl implements ProjectService {
         project.setDescription(description);
 
         String metadata = String.format(
-                "{\"oldName\":\"%s\",\"newName\":\"%s\"}",
+                "{\"oldName\":\"%s\",\"newName\":\"%s\",\"oldDescription\":\"%s\",\"newDescription\":\"%s\"}",
                 oldName,
-                project.getName()
+                project.getName(),
+                oldDescription,
+                project.getDescription()
         );
 
         Long userId = getCurrentUserId();
@@ -188,7 +191,7 @@ public class ProjectServiceImpl implements ProjectService {
                 project.getWorkspace().getId(),
                 project.getId(),
                 null,
-                "Project '" + project.getName() + "' deleted",
+                "Project '" + project.getName() + "' soft deleted",
                 null
         );
     }
@@ -216,7 +219,7 @@ public class ProjectServiceImpl implements ProjectService {
                 project.getWorkspace().getId(),
                 project.getId(),
                 null,
-                "Project '" + project.getName() + "' restored",
+                "Project '" + project.getName() + "' restored from deleted state",
                 null
         );
 

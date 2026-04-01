@@ -31,4 +31,10 @@ public interface ActivityService {
             Instant to,
             Pageable pageable
     );
+
+    Page<ActivityLog> getWorkspaceActivities(Long workspaceId, Pageable pageable);
+
+    Page<ActivityLog> getProjectActivities(Long projectId, Pageable pageable);
+
+    Page<ActivityLog> getTaskActivities(Long taskId, Pageable pageable);
 }

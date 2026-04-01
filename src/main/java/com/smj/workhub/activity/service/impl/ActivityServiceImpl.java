@@ -10,6 +10,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 
@@ -73,5 +74,23 @@ public class ActivityServiceImpl implements ActivityService {
                 .and(ActivitySpecification.createdBefore(to));
 
         return activityRepository.findAll(spec, pageable);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ActivityLog> getWorkspaceActivities(Long workspaceId, Pageable pageable) {
+        return activityRepository.findByWorkspaceId(workspaceId, pageable);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ActivityLog> getProjectActivities(Long projectId, Pageable pageable) {
+        return activityRepository.findByProjectId(projectId, pageable);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ActivityLog> getTaskActivities(Long taskId, Pageable pageable) {
+        return activityRepository.findByTaskId(taskId, pageable);
     }
 }

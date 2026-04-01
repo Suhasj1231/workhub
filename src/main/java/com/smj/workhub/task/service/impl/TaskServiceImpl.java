@@ -74,14 +74,17 @@ public class TaskServiceImpl implements TaskService {
         Task saved = taskRepository.save(task);
 
         Long userId = getCurrentUserId();
+        String metadata = String.format("{\"status\":\"%s\",\"priority\":\"%s\",\"dueDate\":\"%s\"}",
+                saved.getStatus(), saved.getPriority(), saved.getDueDate());
+
         activityService.logActivity(
                 userId,
                 ActivityAction.TASK_CREATED,
                 saved.getProject().getWorkspace().getId(),
                 saved.getProject().getId(),
                 saved.getId(),
-                "Task '" + saved.getTitle() + "' created",
-                null
+                "Task '" + saved.getTitle() + "' created with status " + saved.getStatus(),
+                metadata
         );
 
         log.info("Task created successfully id={} projectId={}", saved.getId(), projectId);
@@ -166,7 +169,10 @@ public class TaskServiceImpl implements TaskService {
 
         Task updated = taskRepository.save(task);
 
-        String metadata = String.format("{\"oldTitle\":\"%s\",\"newTitle\":\"%s\",\"oldStatus\":\"%s\",\"newStatus\":\"%s\"}", oldTitle, task.getTitle(), oldStatus, task.getStatus());
+        String metadata = String.format(
+                "{\"oldTitle\":\"%s\",\"newTitle\":\"%s\",\"oldStatus\":\"%s\",\"newStatus\":\"%s\",\"oldPriority\":\"%s\",\"newPriority\":\"%s\"}",
+                oldTitle, task.getTitle(), oldStatus, task.getStatus(), oldPriority, task.getPriority()
+        );
 
         Long userId = getCurrentUserId();
         activityService.logActivity(
@@ -236,7 +242,7 @@ public class TaskServiceImpl implements TaskService {
                 task.getProject().getWorkspace().getId(),
                 task.getProject().getId(),
                 task.getId(),
-                "Task '" + task.getTitle() + "' deleted",
+                "Task '" + task.getTitle() + "' soft deleted",
                 null
         );
     }
@@ -263,7 +269,7 @@ public class TaskServiceImpl implements TaskService {
                 task.getProject().getWorkspace().getId(),
                 task.getProject().getId(),
                 task.getId(),
-                "Task '" + task.getTitle() + "' restored",
+                "Task '" + task.getTitle() + "' restored from deleted state",
                 null
         );
 
