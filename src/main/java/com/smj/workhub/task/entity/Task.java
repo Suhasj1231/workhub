@@ -41,6 +41,11 @@ public class Task {
     @Column(length = 2000)
     private String description;
 
+    // -------- CREATED BY --------
+
+    @Column(name = "created_by", nullable = false)
+    private Long createdBy;
+
     // -------- ENUMS --------
 
     @Enumerated(EnumType.STRING)
@@ -126,6 +131,10 @@ public class Task {
         return updatedAt;
     }
 
+    public Long getCreatedBy() {
+        return createdBy;
+    }
+
     // -------- SETTERS --------
 
     public void setProject(Project project) {
@@ -154,5 +163,9 @@ public class Task {
 
     public void setDeleted(boolean deleted) {
         this.deleted = deleted;
+    }
+
+    public void setCreatedBy(Long createdBy) {
+        this.createdBy = createdBy;
     }
 }

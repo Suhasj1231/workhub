@@ -24,6 +24,9 @@ import com.smj.workhub.activity.service.ActivityService;
 import com.smj.workhub.activity.entity.ActivityAction;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import com.smj.workhub.notification.service.NotificationService;
+import com.smj.workhub.notification.entity.NotificationType;
+
 @Service
 @Transactional
 public class TaskServiceImpl implements TaskService {
@@ -33,15 +36,18 @@ public class TaskServiceImpl implements TaskService {
     private final TaskRepository taskRepository;
     private final ProjectRepository projectRepository;
     private final ActivityService activityService;
+    private final NotificationService notificationService;
 
     public TaskServiceImpl(
             TaskRepository taskRepository,
             ProjectRepository projectRepository,
-            ActivityService activityService
+            ActivityService activityService,
+            NotificationService notificationService
     ) {
         this.taskRepository = taskRepository;
         this.projectRepository = projectRepository;
         this.activityService = activityService;
+        this.notificationService = notificationService;
     }
 
     // CREATE TASK
@@ -86,6 +92,8 @@ public class TaskServiceImpl implements TaskService {
                 "Task '" + saved.getTitle() + "' created with status " + saved.getStatus(),
                 metadata
         );
+
+        // 🔔 Notification (optional: notify workspace owner or skip for now)
 
         log.info("Task created successfully id={} projectId={}", saved.getId(), projectId);
         return saved;
@@ -185,6 +193,20 @@ public class TaskServiceImpl implements TaskService {
                 metadata
         );
 
+        // 🔔 Notification (notify task owner)
+        Long targetUserId = task.getCreatedBy();
+        if (targetUserId != null && !targetUserId.equals(userId)) {
+            notificationService.createNotification(
+                    targetUserId,
+                    NotificationType.TASK_UPDATED,
+                    "Task '" + task.getTitle() + "' was updated",
+                    task.getProject().getWorkspace().getId(),
+                    task.getProject().getId(),
+                    task.getId(),
+                    null
+            );
+        }
+
         log.info("Task updated successfully id={}", updated.getId());
         return updated;
     }
@@ -216,6 +238,20 @@ public class TaskServiceImpl implements TaskService {
                 "Task status changed from " + oldStatus + " to " + status,
                 "{\"oldStatus\":\"" + oldStatus + "\",\"newStatus\":\"" + status + "\"}"
         );
+
+        // 🔔 Notification (notify task owner if exists)
+        Long targetUserId = task.getCreatedBy();
+        if (targetUserId != null && !targetUserId.equals(userId)) {
+            notificationService.createNotification(
+                    targetUserId,
+                    NotificationType.TASK_STATUS_CHANGED,
+                    "Task status updated to " + status,
+                    task.getProject().getWorkspace().getId(),
+                    task.getProject().getId(),
+                    task.getId(),
+                    null
+            );
+        }
 
         log.info("Task status updated successfully id={} status={}", updated.getId(), updated.getStatus());
         return updated;
