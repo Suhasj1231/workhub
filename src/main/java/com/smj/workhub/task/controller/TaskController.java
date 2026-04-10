@@ -1,10 +1,7 @@
 package com.smj.workhub.task.controller;
 
 import com.smj.workhub.common.error.ApiError;
-import com.smj.workhub.task.dto.CreateTaskRequest;
-import com.smj.workhub.task.dto.TaskResponse;
-import com.smj.workhub.task.dto.UpdateTaskRequest;
-import com.smj.workhub.task.dto.UpdateTaskStatusRequest;
+import com.smj.workhub.task.dto.*;
 import com.smj.workhub.task.entity.Task;
 import com.smj.workhub.task.entity.TaskPriority;
 import com.smj.workhub.task.entity.TaskStatus;
@@ -88,6 +85,7 @@ public class TaskController {
             @RequestParam(required = false) TaskPriority priority,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) Boolean includeDeleted,
+            @RequestParam(required = false) Boolean assignedToMe,
             @PageableDefault(
                     size = 10,
                     sort = "createdAt",
@@ -103,6 +101,7 @@ public class TaskController {
                         priority,
                         search,
                         includeDeleted,
+                        assignedToMe,
                         pageable
                 )
                 .map(this::toResponse);
@@ -225,11 +224,41 @@ public class TaskController {
         return toResponse(task);
     }
 
+    @Operation(
+            summary = "Assign task",
+            description = "Assigns a task to a user"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Task assigned successfully"),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Task or User not found",
+                    content = @Content(schema = @Schema(implementation = ApiError.class))
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Access denied",
+                    content = @Content(schema = @Schema(implementation = ApiError.class))
+            )
+    })
+    @PatchMapping("/tasks/{taskId}/assign")
+    public TaskResponse assignTask(
+            @PathVariable Long taskId,
+            @Valid @RequestBody AssignTaskRequest request
+    ) {
+        Task existing = taskService.getTaskById(taskId);
+        workspaceAccessService.verifyWorkspaceMember(existing.getProject().getWorkspace().getId());
+
+        Task task = taskService.assignTask(taskId, request.getUserId());
+        return toResponse(task);
+    }
+
     // ENTITY → DTO MAPPER
     private TaskResponse toResponse(Task task) {
         return new TaskResponse(
                 task.getId(),
                 task.getProject().getId(),
+                task.getAssignedTo(),
                 task.getTitle(),
                 task.getDescription(),
                 task.getStatus(),

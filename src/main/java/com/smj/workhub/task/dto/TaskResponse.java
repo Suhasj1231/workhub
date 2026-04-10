@@ -16,6 +16,9 @@ public record TaskResponse(
         @Schema(description = "Project ID to which this task belongs", example = "10")
         Long projectId,
 
+        @Schema(description = "User ID to whom this task is assigned", example = "5")
+        Long assignedTo,
+
         @Schema(description = "Task title", example = "Implement authentication")
         String title,
 

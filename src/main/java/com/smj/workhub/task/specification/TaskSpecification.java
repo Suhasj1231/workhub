@@ -16,14 +16,18 @@ public class TaskSpecification {
             TaskStatus status,
             TaskPriority priority,
             String search,
-            Boolean includeDeleted
+            Boolean includeDeleted,
+            Boolean assignedToMe,
+            Long currentUserId
     ) {
         return (root, query, cb) -> {
 
             List<Predicate> predicates = new ArrayList<>();
 
             // Project filter (mandatory)
-            predicates.add(cb.equal(root.get("project").get("id"), projectId));
+            if (projectId != null) {
+                predicates.add(cb.equal(root.get("project").get("id"), projectId));
+            }
 
             // Soft delete filter
             if (includeDeleted == null || !includeDeleted) {
@@ -48,6 +52,11 @@ public class TaskSpecification {
                                 "%" + search.toLowerCase() + "%"
                         )
                 );
+            }
+
+            // Assigned to current user filter
+            if (Boolean.TRUE.equals(assignedToMe) && currentUserId != null) {
+                predicates.add(cb.equal(root.get("assignedTo").get("id"), currentUserId));
             }
 
             return cb.and(predicates.toArray(new Predicate[0]));
