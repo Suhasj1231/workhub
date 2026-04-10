@@ -13,6 +13,7 @@ public enum ActivityAction {
 
     TASK_CREATED,
     TASK_UPDATED,
+    TASK_ASSIGNED,
     TASK_STATUS_CHANGED,
     TASK_STATUS_UPDATED,
     TASK_RESTORED,

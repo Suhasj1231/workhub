@@ -46,6 +46,11 @@ public class Task {
     @Column(name = "created_by", nullable = false)
     private Long createdBy;
 
+    // -------- ASSIGNED TO --------
+
+    @Column(name = "assigned_to")
+    private Long assignedTo;
+
     // -------- ENUMS --------
 
     @Enumerated(EnumType.STRING)
@@ -135,6 +140,10 @@ public class Task {
         return createdBy;
     }
 
+    public Long getAssignedTo() {
+        return assignedTo;
+    }
+
     // -------- SETTERS --------
 
     public void setProject(Project project) {
@@ -167,5 +176,9 @@ public class Task {
 
     public void setCreatedBy(Long createdBy) {
         this.createdBy = createdBy;
+    }
+
+    public void setAssignedTo(Long assignedTo) {
+        this.assignedTo = assignedTo;
     }
 }

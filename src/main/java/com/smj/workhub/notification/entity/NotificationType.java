@@ -26,11 +26,10 @@ public enum NotificationType {
     TASK_ASSIGNED,          // future-ready
 
     // COMMENT EVENTS
-    COMMENT_ADDED,
+    COMMENT_CREATED,
     COMMENT_UPDATED,
     COMMENT_DELETED,
     COMMENT_REPLIED,
-    COMMENT_CREATED,// for threaded discussions
 
     // ATTACHMENT EVENTS
     ATTACHMENT_UPLOADED,

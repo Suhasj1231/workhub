@@ -26,6 +26,12 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 import com.smj.workhub.notification.service.NotificationService;
 import com.smj.workhub.notification.entity.NotificationType;
+import java.util.Objects;
+
+import com.smj.workhub.user.repository.UserRepository;
+import com.smj.workhub.workspace.repository.WorkspaceMemberRepository;
+import com.smj.workhub.common.exception.AccessDeniedException;
+import com.smj.workhub.workspace.entity.WorkspaceRole;
 
 @Service
 @Transactional
@@ -38,16 +44,23 @@ public class TaskServiceImpl implements TaskService {
     private final ActivityService activityService;
     private final NotificationService notificationService;
 
+    private final UserRepository userRepository;
+    private final WorkspaceMemberRepository workspaceMemberRepository;
+
     public TaskServiceImpl(
             TaskRepository taskRepository,
             ProjectRepository projectRepository,
             ActivityService activityService,
-            NotificationService notificationService
+            NotificationService notificationService,
+            UserRepository userRepository,
+            WorkspaceMemberRepository workspaceMemberRepository
     ) {
         this.taskRepository = taskRepository;
         this.projectRepository = projectRepository;
         this.activityService = activityService;
         this.notificationService = notificationService;
+        this.userRepository = userRepository;
+        this.workspaceMemberRepository = workspaceMemberRepository;
     }
 
     // CREATE TASK
@@ -136,17 +149,22 @@ public class TaskServiceImpl implements TaskService {
             TaskPriority priority,
             String search,
             Boolean includeDeleted,
+            Boolean assignedToMe,
             Pageable pageable
     ) {
-        log.debug("Fetching tasks for projectId={} status={} priority={} search={} includeDeleted={}",
-                projectId, status, priority, search, includeDeleted);
+        log.debug("Fetching tasks for projectId={} status={} priority={} search={} includeDeleted={} assignedToMe={}",
+                projectId, status, priority, search, includeDeleted, assignedToMe);
+
+        Long currentUserId = getCurrentUserId();
 
         Specification<Task> spec = TaskSpecification.filterTasks(
                 projectId,
                 status,
                 priority,
                 search,
-                includeDeleted
+                includeDeleted,
+                assignedToMe,
+                currentUserId
         );
 
         return taskRepository.findAll(spec, pageable);
@@ -311,6 +329,97 @@ public class TaskServiceImpl implements TaskService {
 
         log.info("Task restored successfully id={}", restored.getId());
         return restored;
+    }
+
+    @Override
+    public Task assignTask(Long taskId, Long userIdToAssign) {
+        log.info("Assigning task id={} to userId={}", taskId, userIdToAssign);
+
+        Task task = taskRepository.findByIdAndDeletedFalse(taskId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Task not found with id: " + taskId
+                        )
+                );
+
+        Long workspaceId = task.getProject().getWorkspace().getId();
+
+        Long currentUserId = getCurrentUserId();
+
+        // 🔐 Role-based authorization (only OWNER, ADMIN can assign)
+        var membership = workspaceMemberRepository
+                .findByWorkspaceIdAndUserId(workspaceId, currentUserId)
+                .orElseThrow(() -> new AccessDeniedException("Access denied"));
+
+        if (!(membership.getRole() == WorkspaceRole.OWNER || membership.getRole() == WorkspaceRole.ADMIN)) {
+            throw new AccessDeniedException("Only OWNER or ADMIN can assign tasks");
+        }
+
+        // Validate user (skip if unassign)
+        if (userIdToAssign != null) {
+
+            // 1. User must exist
+            userRepository.findById(userIdToAssign)
+                    .orElseThrow(() ->
+                            new ResourceNotFoundException(
+                                    "User not found with id: " + userIdToAssign
+                            )
+                    );
+
+            // 2. User must belong to workspace
+            workspaceMemberRepository
+                    .findByWorkspaceIdAndUserId(workspaceId, userIdToAssign)
+                    .orElseThrow(() ->
+                            new AccessDeniedException(
+                                    "User does not belong to this workspace"
+                            )
+                    );
+        }
+
+        Long previousAssignee = task.getAssignedTo();
+
+        // No-op if same assignee
+        if (Objects.equals(previousAssignee, userIdToAssign)) {
+            log.info("No-op: task id={} already assigned to userId={}", taskId, userIdToAssign);
+            return task;
+        }
+
+        // Allow unassign (userIdToAssign == null)
+        task.setAssignedTo(userIdToAssign);
+        Task updated = taskRepository.save(task);
+
+
+        // Activity log
+        String metadata = String.format(
+                "{\"oldAssignee\":\"%s\",\"newAssignee\":\"%s\"}",
+                String.valueOf(previousAssignee), String.valueOf(userIdToAssign)
+        );
+
+        activityService.logActivity(
+                currentUserId,
+                ActivityAction.TASK_ASSIGNED,
+                task.getProject().getWorkspace().getId(),
+                task.getProject().getId(),
+                task.getId(),
+                "Task '" + task.getTitle() + "' reassigned from " + previousAssignee + " to " + userIdToAssign,
+                metadata
+        );
+
+        // Notification to assigned user
+        if (userIdToAssign != null && !userIdToAssign.equals(currentUserId)) {
+            notificationService.createNotification(
+                    userIdToAssign,
+                    NotificationType.TASK_ASSIGNED,
+                    "You have been assigned to task '" + task.getTitle() + "'",
+                    task.getProject().getWorkspace().getId(),
+                    task.getProject().getId(),
+                    task.getId(),
+                    null
+            );
+        }
+
+        log.info("Task assigned successfully id={} to userId={}", taskId, userIdToAssign);
+        return updated;
     }
 
     private Long getCurrentUserId() {
