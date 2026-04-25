@@ -90,9 +90,12 @@ public class TaskServiceImpl implements TaskService {
 
         task.setDueDate(request.dueDate());
 
+        Long currentUserId = getCurrentUserId();
+        task.setCreatedBy(currentUserId);
+
         Task saved = taskRepository.save(task);
 
-        Long userId = getCurrentUserId();
+        Long userId = currentUserId;
         String metadata = String.format("{\"status\":\"%s\",\"priority\":\"%s\",\"dueDate\":\"%s\"}",
                 saved.getStatus(), saved.getPriority(), saved.getDueDate());
 
@@ -133,6 +136,19 @@ public class TaskServiceImpl implements TaskService {
     public Task getTaskById(Long id) {
         log.debug("Fetching task id={}", id);
         return taskRepository.findByIdWithProjectAndWorkspace(id)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Task not found with id: " + id
+                        )
+                );
+    }
+
+    // GET TASK BY ID (INCLUDING DELETED)
+    @Transactional(readOnly = true)
+    public Task getTaskByIdIncludingDeleted(Long id) {
+        log.debug("Fetching task (including deleted) id={}", id);
+
+        return taskRepository.findByIdWithProjectAndWorkspaceIncludingDeleted(id)
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
                                 "Task not found with id: " + id
@@ -187,11 +203,25 @@ public class TaskServiceImpl implements TaskService {
         TaskStatus oldStatus = task.getStatus();
         TaskPriority oldPriority = task.getPriority();
 
-        task.setTitle(request.title());
-        task.setDescription(request.description());
-        task.setStatus(request.status());
-        task.setPriority(request.priority());
-        task.setDueDate(request.dueDate());
+        if (request.title() != null) {
+            task.setTitle(request.title().trim());
+        }
+
+        if (request.description() != null) {
+            task.setDescription(request.description());
+        }
+
+        if (request.status() != null) {
+            task.setStatus(request.status());
+        }
+
+        if (request.priority() != null) {
+            task.setPriority(request.priority());
+        }
+
+        if (request.dueDate() != null) {
+            task.setDueDate(request.dueDate());
+        }
 
         Task updated = taskRepository.save(task);
 
@@ -259,6 +289,7 @@ public class TaskServiceImpl implements TaskService {
 
         // 🔔 Notification (notify task owner if exists)
         Long targetUserId = task.getCreatedBy();
+
         if (targetUserId != null && !targetUserId.equals(userId)) {
             notificationService.createNotification(
                     targetUserId,

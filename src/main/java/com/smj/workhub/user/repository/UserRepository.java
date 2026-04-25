@@ -12,9 +12,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByEmail(String email);
 
-    boolean existsByEmail(String email);
-
-    // -------- EMAIL VERIFICATION --------
+    boolean existsByEmail(String email);// -------- EMAIL VERIFICATION --------
 
     Optional<User> findByVerificationTokenHash(String verificationTokenHash);
 

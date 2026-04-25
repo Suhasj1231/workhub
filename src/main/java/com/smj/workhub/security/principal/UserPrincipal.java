@@ -3,6 +3,7 @@ package com.smj.workhub.security.principal;
 import com.smj.workhub.user.entity.User;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -16,11 +17,13 @@ public class UserPrincipal implements UserDetails {
     private final Long id;
     private final String email;
     private final String password;
+    private final String role;
 
     public UserPrincipal(User user) {
         this.id = user.getId();
         this.email = user.getEmail();
         this.password = user.getPasswordHash();
+        this.role = user.getRole().name();
     }
 
     public Long getId() {
@@ -29,8 +32,9 @@ public class UserPrincipal implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // Roles will be implemented later (workspace roles)
-        return Collections.emptyList();
+        return Collections.singletonList(
+                new SimpleGrantedAuthority("ROLE_" + role)
+        );
     }
 
     @Override

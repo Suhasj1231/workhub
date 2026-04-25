@@ -39,4 +39,6 @@ public interface TaskService {
     Task updateTaskStatus(Long id, TaskStatus status);
 
     Task assignTask(Long taskId, Long userId);
+
+    Task getTaskByIdIncludingDeleted(Long taskId);
 }

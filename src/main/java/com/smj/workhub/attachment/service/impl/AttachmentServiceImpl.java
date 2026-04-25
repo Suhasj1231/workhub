@@ -28,7 +28,13 @@ public class AttachmentServiceImpl implements AttachmentService {
 
     private static final String UPLOAD_DIR = "uploads";
     private static final long MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-    private static final String[] ALLOWED_TYPES = {"application/pdf", "image/png", "image/jpeg"};
+    private static final String[] ALLOWED_TYPES = {
+        "application/pdf",
+        "image/png",
+        "image/jpeg",
+        "text/plain",
+        "text/x-java-source"
+    };
 
     private final AttachmentRepository attachmentRepository;
     private final WorkspaceAccessService workspaceAccessService;

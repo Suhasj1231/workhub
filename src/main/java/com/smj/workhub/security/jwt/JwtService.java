@@ -29,7 +29,7 @@ public class JwtService {
     /**
      * Generate JWT token for a user
      */
-    public String generateToken(Long userId, String email) {
+    public String generateToken(Long userId, String email, String role) {
 
         Date now = new Date();
         Date expiry = new Date(now.getTime() + jwtExpiration);
@@ -37,6 +37,7 @@ public class JwtService {
         return Jwts.builder()
                 .setSubject(email) // email becomes the principal identifier
                 .claim("userId", userId)
+                .claim("role", role)
                 .setIssuedAt(now)
                 .setExpiration(expiry)
                 .signWith(signingKey, SignatureAlgorithm.HS256)
@@ -53,6 +54,15 @@ public class JwtService {
             return null;
         }
         return Long.parseLong(value.toString());
+    }
+
+    /**
+     * Extract role from token
+     */
+    public String extractRole(String token) {
+        Claims claims = extractAllClaims(token);
+        Object value = claims.get("role");
+        return value != null ? value.toString() : null;
     }
 
     /**

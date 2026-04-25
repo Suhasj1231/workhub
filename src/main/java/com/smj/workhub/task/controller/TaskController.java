@@ -188,7 +188,7 @@ public class TaskController {
     })
     @PatchMapping("/tasks/{taskId}/restore")
     public TaskResponse restoreTask(@PathVariable Long taskId) {
-        Task existing = taskService.getTaskById(taskId);
+        Task existing = taskService.getTaskByIdIncludingDeleted(taskId);
         workspaceAccessService.verifyWorkspaceMember(existing.getProject().getWorkspace().getId());
         Task task = taskService.restoreTask(taskId);
         return toResponse(task);

@@ -171,7 +171,11 @@ public class AuthServiceImpl implements AuthService {
             throw new IllegalArgumentException("Invalid email or password");
         }
 
-        String token = jwtService.generateToken(user.getId(), user.getEmail());
+        String token = jwtService.generateToken(
+                user.getId(),
+                user.getEmail(),
+                user.getRole().name()
+        );
 
         return new LoginResponse(token);
     }
@@ -227,7 +231,8 @@ public class AuthServiceImpl implements AuthService {
                 user.getEmail(),
                 user.getFirstName(),
                 user.getLastName(),
-                user.getStatus()
+                user.getStatus(),
+                user.getRole().name()
         );
     }
 
