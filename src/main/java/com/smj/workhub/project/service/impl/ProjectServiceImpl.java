@@ -8,6 +8,8 @@ import com.smj.workhub.project.service.ProjectService;
 import com.smj.workhub.project.specification.ProjectSpecification;
 import com.smj.workhub.workspace.entity.Workspace;
 import com.smj.workhub.workspace.repository.WorkspaceRepository;
+import com.smj.workhub.activity.service.ActivityService;
+import com.smj.workhub.activity.entity.ActivityAction;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -15,6 +17,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.core.context.SecurityContextHolder;
+import com.smj.workhub.security.principal.UserPrincipal;
 
 @Service
 @Transactional
@@ -24,13 +28,16 @@ public class ProjectServiceImpl implements ProjectService {
 
     private final ProjectRepository projectRepository;
     private final WorkspaceRepository workspaceRepository;
+    private final ActivityService activityService;
 
     public ProjectServiceImpl(
             ProjectRepository projectRepository,
-            WorkspaceRepository workspaceRepository
+            WorkspaceRepository workspaceRepository,
+            ActivityService activityService
     ) {
         this.projectRepository = projectRepository;
         this.workspaceRepository = workspaceRepository;
+        this.activityService = activityService;
     }
 
     // -------- CREATE --------
@@ -47,15 +54,28 @@ public class ProjectServiceImpl implements ProjectService {
                         )
                 );
 
-        if (projectRepository.existsByWorkspaceIdAndNameAndDeletedFalse(workspaceId, name)) {
+        String normalizedName = name.trim();
+        if (projectRepository.existsByWorkspaceIdAndNameAndDeletedFalse(workspaceId, normalizedName)) {
             throw new DuplicateResourceException(
-                    "Project with name '" + name + "' already exists in this workspace"
+                    "Project with name '" + normalizedName + "' already exists in this workspace"
             );
         }
 
-        Project project = new Project(workspace, name.trim(), description);
+        Project project = new Project(workspace, normalizedName, description);
 
         Project saved = projectRepository.save(project);
+
+        Long userId = getCurrentUserId();
+        activityService.logActivity(
+                userId,
+                ActivityAction.PROJECT_CREATED,
+                workspaceId,
+                saved.getId(),
+                null,
+                "Project '" + saved.getName() + "' created",
+                null
+        );
+
         log.info("Project created successfully id={} workspaceId={}", saved.getId(), workspaceId);
         return saved;
     }
@@ -105,6 +125,9 @@ public class ProjectServiceImpl implements ProjectService {
                         )
                 );
 
+        String oldName = project.getName();
+        String oldDescription = project.getDescription();
+
         String normalizedName = name.trim();
 
         boolean duplicateExists =
@@ -121,6 +144,25 @@ public class ProjectServiceImpl implements ProjectService {
 
         project.setName(normalizedName);
         project.setDescription(description);
+
+        String metadata = String.format(
+                "{\"oldName\":\"%s\",\"newName\":\"%s\",\"oldDescription\":\"%s\",\"newDescription\":\"%s\"}",
+                oldName,
+                project.getName(),
+                oldDescription,
+                project.getDescription()
+        );
+
+        Long userId = getCurrentUserId();
+        activityService.logActivity(
+                userId,
+                ActivityAction.PROJECT_UPDATED,
+                project.getWorkspace().getId(),
+                project.getId(),
+                null,
+                "Project '" + oldName + "' updated",
+                metadata
+        );
 
         log.info("Project updated successfully id={}", project.getId());
         return project;
@@ -140,6 +182,18 @@ public class ProjectServiceImpl implements ProjectService {
                 );
 
         project.setDeleted(true);
+        projectRepository.save(project);
+
+        Long userId = getCurrentUserId();
+        activityService.logActivity(
+                userId,
+                ActivityAction.PROJECT_DELETED,
+                project.getWorkspace().getId(),
+                project.getId(),
+                null,
+                "Project '" + project.getName() + "' soft deleted",
+                null
+        );
     }
 
     // -------- RESTORE --------
@@ -156,8 +210,28 @@ public class ProjectServiceImpl implements ProjectService {
                 );
 
         project.setDeleted(false);
+        Project restored = projectRepository.save(project);
+
+        Long userId = getCurrentUserId();
+        activityService.logActivity(
+                userId,
+                ActivityAction.PROJECT_RESTORED,
+                project.getWorkspace().getId(),
+                project.getId(),
+                null,
+                "Project '" + project.getName() + "' restored from deleted state",
+                null
+        );
 
         log.info("Project restored successfully id={}", project.getId());
-        return project;
+        return restored;
+    }
+
+    private Long getCurrentUserId() {
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (principal instanceof UserPrincipal userPrincipal) {
+            return userPrincipal.getId();
+        }
+        throw new RuntimeException("User not authenticated");
     }
 }

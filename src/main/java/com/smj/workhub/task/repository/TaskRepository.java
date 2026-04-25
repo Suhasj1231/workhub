@@ -23,4 +23,13 @@ public interface TaskRepository extends
     """)
     Optional<Task> findByIdWithProjectAndWorkspace(Long id);
 
+    // Fetch task with project and workspace INCLUDING deleted (for restore flow)
+    @Query("""
+        SELECT t FROM Task t
+        JOIN FETCH t.project p
+        JOIN FETCH p.workspace
+        WHERE t.id = :id
+    """)
+    Optional<Task> findByIdWithProjectAndWorkspaceIncludingDeleted(Long id);
+
 }

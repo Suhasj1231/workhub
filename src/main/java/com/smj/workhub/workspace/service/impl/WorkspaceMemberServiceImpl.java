@@ -2,6 +2,7 @@ package com.smj.workhub.workspace.service.impl;
 
 import com.smj.workhub.common.exception.DuplicateResourceException;
 import com.smj.workhub.common.exception.ResourceNotFoundException;
+import com.smj.workhub.security.principal.UserPrincipal;
 import com.smj.workhub.workspace.entity.Workspace;
 import com.smj.workhub.workspace.entity.WorkspaceMember;
 import com.smj.workhub.workspace.entity.WorkspaceRole;
@@ -14,6 +15,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.smj.workhub.activity.entity.ActivityAction;
+import com.smj.workhub.activity.service.ActivityService;
+
 
 import java.util.List;
 
@@ -26,15 +30,18 @@ public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
     private final WorkspaceMemberRepository workspaceMemberRepository;
     private final WorkspaceRepository workspaceRepository;
     private final UserRepository userRepository;
+    private final ActivityService activityService;
 
     public WorkspaceMemberServiceImpl(
             WorkspaceMemberRepository workspaceMemberRepository,
             WorkspaceRepository workspaceRepository,
-            UserRepository userRepository
+            UserRepository userRepository,
+            ActivityService activityService
     ) {
         this.workspaceMemberRepository = workspaceMemberRepository;
         this.workspaceRepository = workspaceRepository;
         this.userRepository = userRepository;
+        this.activityService = activityService;
     }
 
     // -------- Add member --------
@@ -66,6 +73,24 @@ public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
 
         WorkspaceMember saved = workspaceMemberRepository.save(membership);
 
+        Long actorId = getCurrentUserId();
+
+        String metadata = String.format(
+                "{\"addedUserId\":%d,\"role\":\"%s\"}",
+                user.getId(),
+                membership.getRole().name()
+        );
+
+        activityService.logActivity(
+                actorId,
+                ActivityAction.WORKSPACE_UPDATED,
+                workspace.getId(),
+                null,
+                null,
+                "User " + user.getEmail() + " added to workspace",
+                metadata
+        );
+
         log.info("User {} added to workspace {}", userId, workspaceId);
 
         return saved;
@@ -82,6 +107,23 @@ public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
                 .orElseThrow(() ->
                         new ResourceNotFoundException("Membership not found")
                 );
+
+        Long actorId = getCurrentUserId();
+
+        String metadata = String.format(
+                "{\"removedUserId\":%d}",
+                membership.getUser().getId()
+        );
+
+        activityService.logActivity(
+                actorId,
+                ActivityAction.WORKSPACE_UPDATED,
+                workspaceId,
+                null,
+                null,
+                "User " + membership.getUser().getEmail() + " removed from workspace",
+                metadata
+        );
 
         workspaceMemberRepository.delete(membership);
 
@@ -108,5 +150,23 @@ public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
     public boolean isMember(Long workspaceId, Long userId) {
 
         return workspaceMemberRepository.existsByWorkspaceIdAndUserId(workspaceId, userId);
+    }
+
+    private Long getCurrentUserId() {
+        var authentication = org.springframework.security.core.context.SecurityContextHolder
+                .getContext()
+                .getAuthentication();
+
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new RuntimeException("User not authenticated");
+        }
+
+        Object principal = authentication.getPrincipal();
+
+        if (principal instanceof UserPrincipal userPrincipal) {
+            return userPrincipal.getId();
+        }
+
+        throw new RuntimeException("Invalid authentication principal");
     }
 }

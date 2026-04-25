@@ -26,6 +26,7 @@ public interface TaskService {
             TaskPriority priority,
             String search,
             Boolean includeDeleted,
+            Boolean assignedToMe,
             Pageable pageable
     );
 
@@ -36,4 +37,8 @@ public interface TaskService {
     Task restoreTask(Long id);
 
     Task updateTaskStatus(Long id, TaskStatus status);
+
+    Task assignTask(Long taskId, Long userId);
+
+    Task getTaskByIdIncludingDeleted(Long taskId);
 }

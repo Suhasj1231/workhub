@@ -71,6 +71,12 @@ public class User {
     @Column(nullable = false, length = 50)
     private UserStatus status = UserStatus.PENDING_VERIFICATION;
 
+    // -------- GLOBAL ROLE (SYSTEM LEVEL) --------
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role", nullable = false, length = 50)
+    private UserRole role = UserRole.USER;
+
     // -------- AUDIT FIELDS --------
 
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -161,6 +167,14 @@ public class User {
 
     public UserStatus getStatus() {
         return status;
+    }
+
+    public UserRole getRole() {
+        return role;
+    }
+
+    public void setRole(UserRole role) {
+        this.role = role;
     }
 
     public void setStatus(UserStatus status) {
