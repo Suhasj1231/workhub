@@ -9,5 +9,6 @@ public record UserResponse(
         String email,
         String firstName,
         String lastName,
-        UserStatus status
+        UserStatus status,
+        String role
 ) {}

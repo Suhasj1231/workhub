@@ -78,6 +78,9 @@ public class SecurityConfig {
                                 "/swagger-ui.html"
                         ).permitAll()
 
+                        // Admin-only endpoints (example)
+                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+
                         // All other APIs require authentication
                         .anyRequest().authenticated()
                 )
