@@ -1,4 +1,5 @@
 package com.smj.workhub.comment.service.impl;
+import java.time.Instant;
 
 import com.smj.workhub.activity.entity.ActivityAction;
 import com.smj.workhub.activity.service.ActivityService;
@@ -92,13 +93,14 @@ public class CommentServiceImpl implements CommentService {
         // 📣 Publish domain event
         eventPublisher.publishEvent(
                 new CommentCreatedEvent(
+                        java.util.UUID.randomUUID(),
                         saved.getId(),
                         taskId,
                         task.getProject().getId(),
                         workspaceId,
                         userId,
                         parent != null ? parent.getId() : null,
-                        saved.getCreatedAt()
+                        Instant.now()
                 )
         );
 

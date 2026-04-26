@@ -1,33 +1,41 @@
 package com.smj.workhub.comment.event;
 
 import java.time.Instant;
+import java.util.UUID;
 
 public class CommentCreatedEvent {
 
+    private final UUID eventId;
     private final Long commentId;
     private final Long taskId;
     private final Long projectId;
     private final Long workspaceId;
     private final Long actorUserId;
     private final Long parentCommentId;
-    private final Instant createdAt;
+    private final Instant occurredAt;
 
     public CommentCreatedEvent(
+            UUID eventId,
             Long commentId,
             Long taskId,
             Long projectId,
             Long workspaceId,
             Long actorUserId,
             Long parentCommentId,
-            Instant createdAt
+            Instant occurredAt
     ) {
+        this.eventId = eventId;
         this.commentId = commentId;
         this.taskId = taskId;
         this.projectId = projectId;
         this.workspaceId = workspaceId;
         this.actorUserId = actorUserId;
         this.parentCommentId = parentCommentId;
-        this.createdAt = createdAt;
+        this.occurredAt = occurredAt;
+    }
+
+    public UUID getEventId() {
+        return eventId;
     }
 
     public Long getCommentId() {
@@ -54,8 +62,8 @@ public class CommentCreatedEvent {
         return parentCommentId;
     }
 
-    public Instant getCreatedAt() {
-        return createdAt;
+    public Instant getOccurredAt() {
+        return occurredAt;
     }
 }
 
