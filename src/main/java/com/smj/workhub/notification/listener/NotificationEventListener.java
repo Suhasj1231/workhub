@@ -6,6 +6,7 @@ import com.smj.workhub.notification.service.NotificationService;
 import com.smj.workhub.task.entity.Task;
 import com.smj.workhub.task.repository.TaskRepository;
 import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -20,6 +21,7 @@ public class NotificationEventListener {
         this.taskRepository = taskRepository;
     }
 
+    @Async
     @EventListener
     public void handleCommentCreated(CommentCreatedEvent event) {
 
