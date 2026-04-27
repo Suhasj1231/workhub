@@ -20,6 +20,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.CacheEvict;
+
 import com.smj.workhub.activity.service.ActivityService;
 import com.smj.workhub.activity.entity.ActivityAction;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -159,6 +162,7 @@ public class TaskServiceImpl implements TaskService {
     // LIST TASKS WITH FILTERS
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "tasks", key = "#projectId + '-' + #status + '-' + #priority + '-' + #search + '-' + #includeDeleted + '-' + #assignedToMe + '-' + #pageable.pageNumber + '-' + #pageable.pageSize")
     public Page<Task> getTasks(
             Long projectId,
             TaskStatus status,
@@ -188,6 +192,7 @@ public class TaskServiceImpl implements TaskService {
 
     // UPDATE TASK
     @Override
+    @CacheEvict(value = "tasks", allEntries = true)
     public Task updateTask(Long id, UpdateTaskRequest request) {
         log.info("Updating task id={}", id);
 
@@ -261,6 +266,7 @@ public class TaskServiceImpl implements TaskService {
 
     // PATCH TASK STATUS
     @Override
+    @CacheEvict(value = "tasks", allEntries = true)
     public Task updateTaskStatus(Long id, TaskStatus status) {
         log.info("Updating task status id={} newStatus={}", id, status);
 
@@ -308,6 +314,7 @@ public class TaskServiceImpl implements TaskService {
 
     // SOFT DELETE
     @Override
+    @CacheEvict(value = "tasks", allEntries = true)
     public void deleteTask(Long id) {
         log.warn("Soft deleting task id={}", id);
 
@@ -334,6 +341,7 @@ public class TaskServiceImpl implements TaskService {
 
     // RESTORE TASK
     @Override
+    @CacheEvict(value = "tasks", allEntries = true)
     public Task restoreTask(Long id) {
         log.info("Restoring task id={}", id);
 
@@ -363,6 +371,7 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
+    @CacheEvict(value = "tasks", allEntries = true)
     public Task assignTask(Long taskId, Long userIdToAssign) {
         log.info("Assigning task id={} to userId={}", taskId, userIdToAssign);
 
