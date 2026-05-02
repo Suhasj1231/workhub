@@ -67,7 +67,6 @@ public class CommentCreatedEvent {
     }
 }
 
-// todo why not lombok construcotr and getters an setters
 
 /*  need explation of the reason
 ❌ No Lombok here (intentional)

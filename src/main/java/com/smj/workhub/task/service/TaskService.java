@@ -1,6 +1,7 @@
 package com.smj.workhub.task.service;
 
 import com.smj.workhub.task.dto.CreateTaskRequest;
+import com.smj.workhub.task.dto.TaskResponse;
 import com.smj.workhub.task.dto.UpdateTaskRequest;
 import com.smj.workhub.task.entity.Task;
 import com.smj.workhub.task.entity.TaskPriority;
@@ -20,7 +21,7 @@ public interface TaskService {
 
     Task getTaskById(Long id);
 
-    Page<Task> getTasks(
+    Page<TaskResponse> getTasks(
             Long projectId,
             TaskStatus status,
             TaskPriority priority,

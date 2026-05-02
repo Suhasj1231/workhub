@@ -22,6 +22,7 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-web")
 	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 	implementation("org.springframework.boot:spring-boot-starter-validation")
+    implementation("org.springframework.boot:spring-boot-starter-data-redis")
 
 	implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0")
 
@@ -41,6 +42,8 @@ dependencies {
 	developmentOnly("org.springframework.boot:spring-boot-devtools")
 
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
+
+
 }
 
 tasks.withType<Test> {

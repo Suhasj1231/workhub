@@ -138,7 +138,7 @@ public class AuthServiceImpl implements AuthService {
             throw new IllegalStateException("Invalid credentials");
         }
 
-        // TODO generate JWT
+
         String token = "JWT_TOKEN_PLACEHOLDER";
 
         return new AuthResponse(token, "Bearer");

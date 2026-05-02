@@ -32,9 +32,12 @@ import com.smj.workhub.notification.entity.NotificationType;
 import java.util.Objects;
 
 import com.smj.workhub.user.repository.UserRepository;
+import com.smj.workhub.task.dto.TaskResponse;
 import com.smj.workhub.workspace.repository.WorkspaceMemberRepository;
 import com.smj.workhub.common.exception.AccessDeniedException;
 import com.smj.workhub.workspace.entity.WorkspaceRole;
+
+import com.smj.workhub.cache.RedisCacheService;
 
 @Service
 @Transactional
@@ -50,13 +53,16 @@ public class TaskServiceImpl implements TaskService {
     private final UserRepository userRepository;
     private final WorkspaceMemberRepository workspaceMemberRepository;
 
+    private final RedisCacheService redisCacheService;
+
     public TaskServiceImpl(
             TaskRepository taskRepository,
             ProjectRepository projectRepository,
             ActivityService activityService,
             NotificationService notificationService,
             UserRepository userRepository,
-            WorkspaceMemberRepository workspaceMemberRepository
+            WorkspaceMemberRepository workspaceMemberRepository,
+            RedisCacheService redisCacheService
     ) {
         this.taskRepository = taskRepository;
         this.projectRepository = projectRepository;
@@ -64,6 +70,7 @@ public class TaskServiceImpl implements TaskService {
         this.notificationService = notificationService;
         this.userRepository = userRepository;
         this.workspaceMemberRepository = workspaceMemberRepository;
+        this.redisCacheService = redisCacheService;
     }
 
     // CREATE TASK
@@ -162,8 +169,11 @@ public class TaskServiceImpl implements TaskService {
     // LIST TASKS WITH FILTERS
     @Override
     @Transactional(readOnly = true)
-    @Cacheable(value = "tasks", key = "#projectId + '-' + #status + '-' + #priority + '-' + #search + '-' + #includeDeleted + '-' + #assignedToMe + '-' + #pageable.pageNumber + '-' + #pageable.pageSize")
-    public Page<Task> getTasks(
+    @Cacheable(
+        value = "tasks",
+        key = "'tasks::project:' + #projectId + '::status:' + (#status != null ? #status.name() : 'ALL') + '::priority:' + (#priority != null ? #priority.name() : 'ALL') + '::search:' + (#search != null ? #search : 'NONE') + '::deleted:' + #includeDeleted + '::assigned:' + #assignedToMe + '::page:' + #pageable.pageNumber + '::size:' + #pageable.pageSize"
+    )
+    public Page<TaskResponse> getTasks(
             Long projectId,
             TaskStatus status,
             TaskPriority priority,
@@ -187,12 +197,24 @@ public class TaskServiceImpl implements TaskService {
                 currentUserId
         );
 
-        return taskRepository.findAll(spec, pageable);
+        Page<Task> taskPage = taskRepository.findAll(spec, pageable);
+
+        return taskPage.map(task -> new TaskResponse(
+                task.getId(),
+                task.getProject().getId(),
+                task.getAssignedTo(),
+                task.getTitle(),
+                task.getDescription(),
+                task.getStatus(),
+                task.getPriority(),
+                task.getDueDate(),
+                task.getCreatedAt(),
+                task.getUpdatedAt()
+        ));
     }
 
     // UPDATE TASK
     @Override
-    @CacheEvict(value = "tasks", allEntries = true)
     public Task updateTask(Long id, UpdateTaskRequest request) {
         log.info("Updating task id={}", id);
 
@@ -229,6 +251,7 @@ public class TaskServiceImpl implements TaskService {
         }
 
         Task updated = taskRepository.save(task);
+        redisCacheService.evictTasksByProject(task.getProject().getId());
 
         String metadata = String.format(
                 "{\"oldTitle\":\"%s\",\"newTitle\":\"%s\",\"oldStatus\":\"%s\",\"newStatus\":\"%s\",\"oldPriority\":\"%s\",\"newPriority\":\"%s\"}",
@@ -266,7 +289,6 @@ public class TaskServiceImpl implements TaskService {
 
     // PATCH TASK STATUS
     @Override
-    @CacheEvict(value = "tasks", allEntries = true)
     public Task updateTaskStatus(Long id, TaskStatus status) {
         log.info("Updating task status id={} newStatus={}", id, status);
 
@@ -281,6 +303,7 @@ public class TaskServiceImpl implements TaskService {
         task.setStatus(status);
 
         Task updated = taskRepository.save(task);
+        redisCacheService.evictTasksByProject(task.getProject().getId());
 
         Long userId = getCurrentUserId();
         activityService.logActivity(
@@ -314,7 +337,6 @@ public class TaskServiceImpl implements TaskService {
 
     // SOFT DELETE
     @Override
-    @CacheEvict(value = "tasks", allEntries = true)
     public void deleteTask(Long id) {
         log.warn("Soft deleting task id={}", id);
 
@@ -326,6 +348,7 @@ public class TaskServiceImpl implements TaskService {
                 );
         task.setDeleted(true);
         taskRepository.save(task);
+        redisCacheService.evictTasksByProject(task.getProject().getId());
 
         Long userId = getCurrentUserId();
         activityService.logActivity(
@@ -341,7 +364,6 @@ public class TaskServiceImpl implements TaskService {
 
     // RESTORE TASK
     @Override
-    @CacheEvict(value = "tasks", allEntries = true)
     public Task restoreTask(Long id) {
         log.info("Restoring task id={}", id);
 
@@ -354,6 +376,7 @@ public class TaskServiceImpl implements TaskService {
 
         task.setDeleted(false);
         Task restored = taskRepository.save(task);
+        redisCacheService.evictTasksByProject(task.getProject().getId());
 
         Long userId = getCurrentUserId();
         activityService.logActivity(
@@ -371,7 +394,6 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    @CacheEvict(value = "tasks", allEntries = true)
     public Task assignTask(Long taskId, Long userIdToAssign) {
         log.info("Assigning task id={} to userId={}", taskId, userIdToAssign);
 
@@ -427,6 +449,7 @@ public class TaskServiceImpl implements TaskService {
         // Allow unassign (userIdToAssign == null)
         task.setAssignedTo(userIdToAssign);
         Task updated = taskRepository.save(task);
+        redisCacheService.evictTasksByProject(task.getProject().getId());
 
 
         // Activity log
