@@ -24,4 +24,3 @@ public class AsyncConfig {
 }
 
 
-// todo : explation of the above with an example scenario

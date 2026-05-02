@@ -89,7 +89,6 @@ public class CommentServiceImpl implements CommentService {
                 "Comment added on task",
                 null
         );
-//todo : need to check from wehre the below data is coming from ?
         // 📣 Publish domain event
         eventPublisher.publishEvent(
                 new CommentCreatedEvent(
