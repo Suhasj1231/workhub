@@ -43,6 +43,8 @@ dependencies {
 
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 
+    implementation("org.springframework.kafka:spring-kafka")
+
 
 }
 
