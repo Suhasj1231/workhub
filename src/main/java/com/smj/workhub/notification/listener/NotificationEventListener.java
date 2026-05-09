@@ -5,13 +5,10 @@ import com.smj.workhub.notification.entity.NotificationType;
 import com.smj.workhub.notification.service.NotificationService;
 import com.smj.workhub.task.entity.Task;
 import com.smj.workhub.task.repository.TaskRepository;
-import org.springframework.context.event.EventListener;
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.stereotype.Component;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Component
+// Deprecated: replaced by KafkaConsumerService in Phase 6 Module 2
 public class NotificationEventListener {
 
     private static final Logger log = LoggerFactory.getLogger(NotificationEventListener.class);
@@ -25,8 +22,6 @@ public class NotificationEventListener {
         this.taskRepository = taskRepository;
     }
 
-    @Async
-    @EventListener
     public void handleCommentCreated(CommentCreatedEvent event) {
         try {
 
