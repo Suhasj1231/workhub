@@ -22,6 +22,7 @@ public class KafkaConsumerConfig {
             KafkaTemplate<String, String> kafkaTemplate
     ) {
 
+        // Retry every 1 second with maximum 2 retries
         FixedBackOff fixedBackOff = new FixedBackOff(
                 1000L,
                 2L
@@ -30,10 +31,25 @@ public class KafkaConsumerConfig {
         DeadLetterPublishingRecoverer recoverer =
                 new DeadLetterPublishingRecoverer(
                         kafkaTemplate,
-                        (record, ex) -> new TopicPartition(
-                                record.topic() + "-dlt",
-                                record.partition()
-                        )
+                        (record, ex) -> {
+
+                            String deadLetterTopic = record.topic() + "-dlt";
+
+                            log.error(
+                                    "EVENT_MOVED_TO_DLQ | originalTopic={} | deadLetterTopic={} | partition={} | payload={} | error={}",
+                                    record.topic(),
+                                    deadLetterTopic,
+                                    record.partition(),
+                                    record.value(),
+                                    ex.getMessage(),
+                                    ex
+                            );
+
+                            return new TopicPartition(
+                                    deadLetterTopic,
+                                    record.partition()
+                            );
+                        }
                 );
 
         DefaultErrorHandler errorHandler = new DefaultErrorHandler(
@@ -43,10 +59,11 @@ public class KafkaConsumerConfig {
 
         errorHandler.setRetryListeners((record, ex, deliveryAttempt) ->
                 log.warn(
-                        "Retrying Kafka message | topic={} | attempt={} | payload={}",
+                        "EVENT_RETRY_TRIGGERED | topic={} | attempt={} | payload={} | error={}",
                         record.topic(),
                         deliveryAttempt,
                         record.value(),
+                        ex.getMessage(),
                         ex
                 )
         );
@@ -55,7 +72,11 @@ public class KafkaConsumerConfig {
                 JsonProcessingException.class
         );
 
-        log.info("Kafka DLQ support enabled");
+        log.info(
+                "KAFKA_ERROR_HANDLING_CONFIGURED | retries={} | retryBackoffMs={} | dlqEnabled=true",
+                2,
+                1000
+        );
 
         return errorHandler;
     }
