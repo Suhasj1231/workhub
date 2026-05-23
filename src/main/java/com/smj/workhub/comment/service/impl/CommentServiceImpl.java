@@ -1,4 +1,5 @@
 package com.smj.workhub.comment.service.impl;
+import java.time.Instant;
 
 import com.smj.workhub.activity.entity.ActivityAction;
 import com.smj.workhub.activity.service.ActivityService;
@@ -13,8 +14,9 @@ import com.smj.workhub.security.principal.UserPrincipal;
 import com.smj.workhub.task.entity.Task;
 import com.smj.workhub.task.repository.TaskRepository;
 import com.smj.workhub.workspace.service.WorkspaceAccessService;
-import com.smj.workhub.notification.service.NotificationService;
 import com.smj.workhub.notification.entity.NotificationType;
+import com.smj.workhub.messaging.kafka.KafkaProducerService;
+import com.smj.workhub.comment.event.CommentCreatedEvent;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
@@ -30,20 +32,20 @@ public class CommentServiceImpl implements CommentService {
     private final TaskRepository taskRepository;
     private final WorkspaceAccessService workspaceAccessService;
     private final ActivityService activityService;
-    private final NotificationService notificationService;
+    private final KafkaProducerService kafkaProducerService;
 
     public CommentServiceImpl(
             CommentRepository commentRepository,
             TaskRepository taskRepository,
             WorkspaceAccessService workspaceAccessService,
             ActivityService activityService,
-            NotificationService notificationService
+            KafkaProducerService kafkaProducerService
     ) {
         this.commentRepository = commentRepository;
         this.taskRepository = taskRepository;
         this.workspaceAccessService = workspaceAccessService;
         this.activityService = activityService;
-        this.notificationService = notificationService;
+        this.kafkaProducerService = kafkaProducerService;
     }
 
     @Override
@@ -87,21 +89,22 @@ public class CommentServiceImpl implements CommentService {
                 "Comment added on task",
                 null
         );
+        // 📣 Publish Kafka event
+        CommentCreatedEvent event = new CommentCreatedEvent(
+                java.util.UUID.randomUUID(),
+                saved.getId(),
+                taskId,
+                task.getProject().getId(),
+                workspaceId,
+                userId,
+                parent != null ? parent.getId() : null,
+                Instant.now()
+        );
 
-        // 🔔 Notification (notify task owner)
-        Long targetUserId = task.getCreatedBy(); // assumes field exists
-
-        if (targetUserId != null && !targetUserId.equals(userId)) {
-            notificationService.createNotification(
-                    targetUserId,
-                    NotificationType.COMMENT_CREATED,
-                    "New comment added on your task",
-                    workspaceId,
-                    task.getProject().getId(),
-                    taskId,
-                    null
-            );
-        }
+        kafkaProducerService.sendCommentCreatedEvent(
+                "comment-created-topic",
+                event
+        );
 
         return toResponse(saved);
     }

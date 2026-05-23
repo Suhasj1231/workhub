@@ -103,8 +103,7 @@ public class TaskController {
                         includeDeleted,
                         assignedToMe,
                         pageable
-                )
-                .map(this::toResponse);
+                );
     }
 
     // GET TASK BY ID
