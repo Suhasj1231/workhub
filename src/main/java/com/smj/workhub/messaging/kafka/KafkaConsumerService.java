@@ -14,6 +14,7 @@ import com.smj.workhub.common.event.repository.ProcessedEventRepository;
 
 import java.time.Instant;
 import java.time.Duration;
+import com.smj.workhub.messaging.websocket.service.WebSocketNotificationService;
 
 @Service
 public class KafkaConsumerService {
@@ -23,13 +24,16 @@ public class KafkaConsumerService {
     private final ObjectMapper objectMapper;
     private final NotificationService notificationService;
     private final ProcessedEventRepository processedEventRepository;
+    private final WebSocketNotificationService webSocketNotificationService;
 
     public KafkaConsumerService(ObjectMapper objectMapper,
                                 NotificationService notificationService,
-                                ProcessedEventRepository processedEventRepository) {
+                                ProcessedEventRepository processedEventRepository,
+                                WebSocketNotificationService webSocketNotificationService) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.processedEventRepository = processedEventRepository;
+        this.webSocketNotificationService = webSocketNotificationService;
     }
 
     @KafkaListener(topics = "comment-created-topic", groupId = "workhub-group")
@@ -69,6 +73,15 @@ public class KafkaConsumerService {
                     event.getProjectId(),
                     event.getWorkspaceId(),
                     null
+            );
+            webSocketNotificationService.sendNotification(
+                    event.getActorUserId(),
+                    event
+            );
+            log.info(
+                    "REALTIME_NOTIFICATION_PUSHED | eventId={} | userId={}",
+                    event.getEventId(),
+                    event.getActorUserId()
             );
 
             processedEventRepository.save(
