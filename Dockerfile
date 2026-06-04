@@ -14,9 +14,15 @@ RUN gradle clean build --no-daemon
 # =========================
 FROM eclipse-temurin:21-jre
 
+RUN groupadd -r workhub && useradd -r -g workhub workhub
+
 WORKDIR /app
 
 COPY --from=builder /app/build/libs/workhub-0.0.1-SNAPSHOT.jar app.jar
+
+RUN chown -R workhub:workhub /app
+
+USER workhub
 
 EXPOSE 8080
 
