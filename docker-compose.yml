@@ -4,6 +4,7 @@ services:
     image: postgres:17
 
     container_name: workhub-postgres
+    restart: unless-stopped
 
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
@@ -26,6 +27,7 @@ services:
     image: apache/kafka:4.2.0
 
     container_name: workhub-kafka
+    restart: unless-stopped
 
     ports:
       - "9092:9092"
@@ -67,6 +69,7 @@ services:
     image: redis:7-alpine
 
     container_name: workhub-redis
+    restart: unless-stopped
 
     ports:
       - "6379:6379"
@@ -87,6 +90,7 @@ services:
       context: .
 
     container_name: workhub-app
+    restart: unless-stopped
 
     ports:
       - "8080:8080"
