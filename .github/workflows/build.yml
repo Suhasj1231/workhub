@@ -29,3 +29,12 @@ jobs:
 
       - name: Build WorkHub
         run: ./gradlew build
+
+      - name: Set Up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker Image
+        run: |
+          docker build \
+            -t workhub:ci \
+            .
