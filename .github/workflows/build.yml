@@ -54,11 +54,11 @@ jobs:
       - name: Tag Docker Image
         if: github.ref == 'refs/heads/feature/ci-cd-pipeline'
         run: |
-          docker tag workhub:ci ghcr.io/${{ github.repository_owner }}/workhub:latest
-          docker tag workhub:ci ghcr.io/${{ github.repository_owner }}/workhub:${{ github.sha }}
+          docker tag workhub:ci ghcr.io/suhas1231/workhub:latest
+          docker tag workhub:ci ghcr.io/suhas1231/workhub:${{ github.sha }}
 
       - name: Push Docker Image
         if: github.ref == 'refs/heads/feature/ci-cd-pipeline'
         run: |
-          docker push ghcr.io/${{ github.repository_owner }}/workhub:latest
-          docker push ghcr.io/${{ github.repository_owner }}/workhub:${{ github.sha }}
+          docker push ghcr.io/suhas1231/workhub:latest
+          docker push ghcr.io/suhas1231/workhub:${{ github.sha }}
