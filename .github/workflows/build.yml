@@ -1,5 +1,9 @@
 name: WorkHub Build Pipeline
 
+permissions:
+  contents: read
+  packages: write
+
 on:
   push:
   pull_request:
@@ -33,8 +37,28 @@ jobs:
       - name: Set Up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Login to GHCR
+        if: github.ref == 'refs/heads/dev'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build Docker Image
         run: |
           docker build \
             -t workhub:ci \
             .
+
+      - name: Tag Docker Image
+        if: github.ref == 'refs/heads/dev'
+        run: |
+          docker tag workhub:ci ghcr.io/${{ github.repository_owner }}/workhub:latest
+          docker tag workhub:ci ghcr.io/${{ github.repository_owner }}/workhub:${{ github.sha }}
+
+      - name: Push Docker Image
+        if: github.ref == 'refs/heads/dev'
+        run: |
+          docker push ghcr.io/${{ github.repository_owner }}/workhub:latest
+          docker push ghcr.io/${{ github.repository_owner }}/workhub:${{ github.sha }}
