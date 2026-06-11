@@ -37,12 +37,6 @@ jobs:
       - name: Set Up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Debug GitHub Context
-        run: |
-          echo "Actor: ${{ github.actor }}"
-          echo "Repository: ${{ github.repository }}"
-          echo "Ref: ${{ github.ref }}"
-
       - name: Login to GHCR
         if: github.ref == 'refs/heads/feature/ci-cd-pipeline'
         uses: docker/login-action@v3
@@ -51,20 +45,30 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ github.token }}
 
-      - name: Build Docker Image
-        run: |
-          docker build \
-            -t workhub:ci \
-            .
-
-      - name: Tag Docker Image
+      - name: Extract Docker Metadata
         if: github.ref == 'refs/heads/feature/ci-cd-pipeline'
-        run: |
-          docker tag workhub:ci ghcr.io/suhas1231/workhub:latest
-          docker tag workhub:ci ghcr.io/suhas1231/workhub:${{ github.sha }}
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/suhas1231/workhub
+          tags: |
+            type=raw,value=latest
+            type=sha
 
-      - name: Push Docker Image
+      - name: Build and Push Docker Image
         if: github.ref == 'refs/heads/feature/ci-cd-pipeline'
-        run: |
-          docker push ghcr.io/suhas1231/workhub:latest
-          docker push ghcr.io/suhas1231/workhub:${{ github.sha }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Validate Docker Build (Non-Publishing Branches)
+        if: github.ref != 'refs/heads/feature/ci-cd-pipeline'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
